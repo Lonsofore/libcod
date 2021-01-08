@@ -909,4 +909,28 @@ void gsc_player_getcurrentoffhandslotammo(scr_entref_t id)
 	stackPushInt(ps->ammoclip[ps->offHandIndex - 1]);
 }
 
+void gsc_player_setping(scr_entref_t id)
+{
+    int ping;
+
+    if ( ! stackGetParams("i", &ping))
+    {
+        stackError("gsc_player_setping() argument is undefined or has a wrong type");
+        stackPushUndefined();
+        return;
+    }
+
+    if (id >= MAX_CLIENTS)
+    {
+        stackError("gsc_player_setping() entity %i is not a player", id);
+        stackPushUndefined();
+        return;
+    }
+
+    client_t *client = &svs.clients[id];
+
+    client->ping = ping;
+    stackPushBool(qtrue);
+}
+
 #endif

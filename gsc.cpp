@@ -355,6 +355,7 @@ scr_method_t scriptMethods[] =
 	{"disableitempickup", gsc_player_disableitempickup, 0},
 	{"enableitempickup", gsc_player_enableitempickup, 0},
 	{"getcurrentoffhandslotammo", gsc_player_getcurrentoffhandslotammo, 0},
+  {"setping", gsc_player_setping, 0},
 #endif
 
 #if COMPILE_SQLITE == 1
