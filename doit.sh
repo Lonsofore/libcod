@@ -12,17 +12,19 @@ mysql_variant=0
 pthread_link=""
 sqlite_found=0
 sqlite_libpath=""
+sqlite_libpath2=""
 sqlite_link=""
 
 if [ "$1" != "clean" ]; then
 	read -rsp $'\nChoose Your MySQL variant:\n
 	0. MySQL disabled. (default)\n
-	1. Default MySQL variant: A classic MySQL implentation
-	made by kung and izno.
+	1. Classic MySQL variant (recommended):
+	A default MySQL implementation.
 	Multiple connections, multiple threads,
 	good for servers that use
 	remote MySQL sessions, IRC stuff, and etc.\n
-	2. VoroN\'s MySQL variant. My own MySQL implentation.
+	2. VoroN\'s MySQL variant (experimental):
+	Optional experimental implementation.
 	Native callbacks, native arguments,
 	single connection, single thread,
 	good for local MySQL session,
@@ -55,11 +57,12 @@ if [ "$1" != "clean" ]; then
 	MACHINE_TYPE=$(uname -m)
 	if [ ${MACHINE_TYPE} == 'x86_64' ]; then
 		sqlite_libpath="/usr/lib32/libsqlite3.so"
+		sqlite_libpath2="/usr/lib/i386-linux-gnu/libsqlite3.so"
 	else
 		sqlite_libpath="/usr/lib/libsqlite3.so"
 	fi
 
-	if [ -e $sqlite_libpath ]; then
+	if [ -e $sqlite_libpath ] || [ -e $sqlite_libpath2 ]; then
 		sqlite_found=1
 	else
 		sed -i "/#define COMPILE_SQLITE 1/c\\#define COMPILE_SQLITE 0" config.hpp
@@ -120,6 +123,11 @@ if [ "$(< config.hpp grep '#define COMPILE_BOTS' | grep -o '[0-9]')" == "1" ]; t
 	$cc $options $constants -c gsc_bots.cpp -o objects_"$1"/gsc_bots.opp
 fi
 
+if [ "$(< config.hpp grep '#define COMPILE_ENTITY' | grep -o '[0-9]')" == "1" ]; then
+	echo "##### COMPILE $1 GSC_ENTITY.CPP #####"
+	$cc $options $constants -c gsc_entity.cpp -o objects_"$1"/gsc_entity.opp
+fi
+
 if [ "$(< config.hpp grep '#define COMPILE_EXEC' | grep -o '[0-9]')" == "1" ]; then
 	echo "##### COMPILE $1 GSC_EXEC.CPP #####"
 	$cc $options $constants -c gsc_exec.cpp -o objects_"$1"/gsc_exec.opp
@@ -171,13 +179,14 @@ fi
 
 if [ -d extra ]; then
 	echo "##### COMPILE $1 EXTRAS #####"
-	cd extra
+	(
+	cd extra || return
 	for F in *.cpp;
 	do
 		echo "###### COMPILE $1 EXTRA: $F #####"
 		$cc $options $constants -c "$F" -o ../objects_"$1"/"${F%.cpp}".opp;
 	done
-	cd ..
+	)
 fi
 
 echo "##### COMPILE $1 LIBCOD.CPP #####"

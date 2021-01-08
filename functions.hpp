@@ -30,6 +30,24 @@ static const GetArraySize_t GetArraySize = (GetArraySize_t)0x0807CF30;
 static const GetArraySize_t GetArraySize = (GetArraySize_t)0x0807CFFC;
 #endif
 
+typedef int (*GetVarType_t)(unsigned int a1);
+#if COD_VERSION == COD2_1_0
+static const GetVarType_t GetVarType = (GetVarType_t)0x0807DF7C;
+#elif COD_VERSION == COD2_1_2
+static const GetVarType_t GetVarType = (GetVarType_t)0x0807E500;
+#elif COD_VERSION == COD2_1_3
+static const GetVarType_t GetVarType = (GetVarType_t)0x0807E5CC;
+#endif
+
+typedef short (*BigShort_t)(short l);
+#if COD_VERSION == COD2_1_0
+static const BigShort_t BigShort = (BigShort_t)0x080B4F9A;
+#elif COD_VERSION == COD2_1_2
+static const BigShort_t BigShort = (BigShort_t)0x080B742E;
+#elif COD_VERSION == COD2_1_3
+static const BigShort_t BigShort = (BigShort_t)0x080B7572;
+#endif
+
 typedef char * (*SL_ConvertToString_t)(unsigned int index);
 #if COD_VERSION == COD2_1_0
 static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x08078896;
@@ -57,16 +75,16 @@ static const Cmd_Argv_t Cmd_Argv = (Cmd_Argv_t)0x08060228;
 static const Cmd_Argv_t Cmd_Argv = (Cmd_Argv_t)0x08060220;
 #endif
 
-typedef int (*trap_Argc_t)();
+typedef int (*Cmd_Argc_t)();
 #if COD_VERSION == COD2_1_0
-static const trap_Argc_t trap_Argc = (trap_Argc_t)0x0805FFDC;
+static const Cmd_Argc_t Cmd_Argc = (Cmd_Argc_t)0x0805FFDC;
 #elif COD_VERSION == COD2_1_2
-static const trap_Argc_t trap_Argc = (trap_Argc_t)0x080601E8;
+static const Cmd_Argc_t Cmd_Argc = (Cmd_Argc_t)0x080601E8;
 #elif COD_VERSION == COD2_1_3
-static const trap_Argc_t trap_Argc = (trap_Argc_t)0x080601E0;
+static const Cmd_Argc_t Cmd_Argc = (Cmd_Argc_t)0x080601E0;
 #endif
 
-typedef int (*Scr_GetNumParam_t)();
+typedef int (*Scr_GetNumParam_t)(void);
 #if COD_VERSION == COD2_1_0
 static const Scr_GetNumParam_t Scr_GetNumParam = (Scr_GetNumParam_t)0x08084AEE;
 #elif COD_VERSION == COD2_1_2
@@ -75,13 +93,13 @@ static const Scr_GetNumParam_t Scr_GetNumParam = (Scr_GetNumParam_t)0x0808506A;
 static const Scr_GetNumParam_t Scr_GetNumParam = (Scr_GetNumParam_t)0x08085136;
 #endif
 
-typedef void (*trap_Argv_t)(unsigned int param, char *buf, int bufLen);
+typedef void (*SV_Cmd_ArgvBuffer_t)(int arg, char *buffer, int bufferLength);
 #if COD_VERSION == COD2_1_0
-static const trap_Argv_t trap_Argv = (trap_Argv_t)0x08060074;
+static const SV_Cmd_ArgvBuffer_t SV_Cmd_ArgvBuffer = (SV_Cmd_ArgvBuffer_t)0x08060074;
 #elif COD_VERSION == COD2_1_2
-static const trap_Argv_t trap_Argv = (trap_Argv_t)0x08060280;
+static const SV_Cmd_ArgvBuffer_t SV_Cmd_ArgvBuffer = (SV_Cmd_ArgvBuffer_t)0x08060280;
 #elif COD_VERSION == COD2_1_3
-static const trap_Argv_t trap_Argv = (trap_Argv_t)0x08060278;
+static const SV_Cmd_ArgvBuffer_t SV_Cmd_ArgvBuffer = (SV_Cmd_ArgvBuffer_t)0x08060278;
 #endif
 
 typedef void (*Com_Printf_t)(const char *format, ...);
@@ -147,635 +165,7 @@ static const FS_LoadDir_t FS_LoadDir = (FS_LoadDir_t)0x080A22D8;
 static const FS_LoadDir_t FS_LoadDir = (FS_LoadDir_t)0x080A241C;
 #endif
 
-#define qboolean int
-#define qtrue 1
-#define qfalse 0
-
-typedef unsigned char byte;
-
-typedef enum
-{
-	CS_FREE,		// can be reused for a new connection
-	CS_ZOMBIE,		// client has been disconnected, but don't reuse connection for a couple seconds
-	CS_CONNECTED,	// has been assigned to a client_t, but no gamestate yet
-	CS_PRIMED,		// gamestate has been sent, but client hasn't sent a usercmd
-	CS_ACTIVE		// client is fully in game
-} clientState_t;
-
-typedef enum
-{
-	NA_BOT = 0,
-	NA_BAD = 0,
-	NA_LOOPBACK = 2,
-	NA_BROADCAST = 3,
-	NA_IP = 4,
-	NA_IPX = 5,
-	NA_BROADCAST_IPX = 6
-} netadrtype_t;
-
-typedef struct
-{
-	netadrtype_t type;
-	byte ip[4];
-	byte ipx[10];
-	unsigned short port;
-} netadr_t;
-
-typedef enum
-{
-	NS_CLIENT,
-	NS_SERVER
-} netsrc_t;
-
-typedef struct
-{
-	bool overflowed; // 0
-	char *data; // 4
-	int maxsize; // 8
-	int cursize; // 12
-	int readcount; // 16
-	int bit;
-} msg_t; // 0x18
-
-typedef float vec_t;
-typedef vec_t vec2_t[2];
-typedef vec_t vec3_t[3];
-typedef vec_t vec4_t[4];
-typedef vec_t vec5_t[5];
-
-typedef union
-{
-	int i;
-	byte rgba[4];
-} ucolor_t;
-
-typedef struct cvar_s
-{
-	char *name;
-	char *description;
-	short int flags;
-	byte type;
-	byte modified;
-	union
-	{
-		float floatval;
-		float value;
-		int integer;
-		char* string;
-		byte boolean;
-		vec2_t vec2;
-		vec3_t vec3;
-		vec4_t vec4;
-		ucolor_t color;
-	};
-	union
-	{
-		float latchedFloatval;
-		int latchedInteger;
-		char* latchedString;
-		byte latchedBoolean;
-		vec2_t latchedVec2;
-		vec3_t latchedVec3;
-		vec4_t latchedVec4;
-		ucolor_t latchedColor;
-	};
-	union
-	{
-		float resetFloatval;
-		int resetInteger;
-		char* resetString;
-		byte resetBoolean;
-		vec2_t resetVec2;
-		vec3_t resetVec3;
-		vec4_t resetVec4;
-		ucolor_t resetColor;
-	};
-	union
-	{
-		int imin;
-		float fmin;
-	};
-	union
-	{
-		int imax;
-		float fmax;
-		const char** enumStr;
-	};
-	struct cvar_s *next;
-	struct cvar_s *hashNext;
-} cvar_t;
-
-//defines Cvarflags
-#define	CVAR_ARCHIVE		1	// set to cause it to be saved to vars.rc
-// used for system variables, not for player
-// specific configurations
-#define	CVAR_USERINFO		2	// sent to server on connect or change
-#define	CVAR_SERVERINFO		4	// sent in response to front end requests
-#define	CVAR_SYSTEMINFO		8	// these cvars will be duplicated on all clients
-#define	CVAR_INIT		16	// don't allow change from console at all,
-// but can be set from the command line
-#define	CVAR_LATCH		32	// will only change when C code next does
-// a Cvar_Get(), so it can't be changed
-// without proper initialization.  modified
-// will be set, even though the value hasn't
-// changed yet
-#define	CVAR_ROM		64	// display only, cannot be set by user at all
-#define CVAR_CHEAT		128	// can not be changed if cheats are disabled
-#define	CVAR_TEMP		256	// can be set even when cheats are disabled, but is not archived
-#define CVAR_NORESTART		1024	// do not clear when a cvar_restart is issued
-#define	CVAR_USER_CREATED	16384	// created by a set command
-
-struct VariableStackBuffer
-{
-	const char *pos;
-	u_int16_t size;
-	u_int16_t bufLen;
-	u_int16_t localId;
-	char time;
-	char buf[1];
-};
-
-union VariableUnion
-{
-	int intValue;
-	float floatValue;
-	unsigned int stringValue;
-	const float *vectorValue;
-	const char *codePosValue;
-	unsigned int pointerValue;
-	struct VariableStackBuffer *stackValue;
-	unsigned int entityOffset;
-};
-
-typedef struct
-{
-	union VariableUnion u;
-	int type;
-} VariableValue;
-
-typedef struct
-{
-	const char *fieldBuffer;
-	u_int16_t canonicalStrCount;
-	byte developer;
-	byte developer_script;
-	byte evaluate;
-	byte pad[3];
-	const char *error_message;
-	int error_index;
-	unsigned int time;
-	unsigned int timeArrayId;
-	unsigned int pauseArrayId;
-	unsigned int levelId;
-	unsigned int gameId;
-	unsigned int animId;
-	unsigned int freeEntList;
-	unsigned int tempVariable;
-	byte bInited;
-	byte pad2;
-	u_int16_t savecount;
-	unsigned int checksum;
-	unsigned int entId;
-	unsigned int entFieldName;
-	struct HunkUser *programHunkUser;
-	const char *programBuffer;
-	const char *endScriptBuffer;
-	u_int16_t saveIdMap[24574];
-	u_int16_t saveIdMapRev[24574];
-} scrVarPub_t;
-
-struct function_stack_t
-{
-	const char *pos;
-	unsigned int localId;
-	unsigned int localVarCount;
-	VariableValue *top;
-	VariableValue *startTop;
-};
-
-struct function_frame_t
-{
-	struct function_stack_t fs;
-	int topType;
-};
-
-typedef struct
-{
-	unsigned int *localVars;
-	VariableValue *maxstack;
-	int function_count;
-	struct function_frame_t *function_frame;
-	VariableValue *top;
-	byte debugCode;
-	byte abort_on_error;
-	byte terminal_error;
-	byte pad;
-	unsigned int inparamcount;
-	unsigned int outparamcount;
-	struct function_frame_t function_frame_start[32];
-	VariableValue stack[2048];
-} scrVmPub_t;
-
-typedef int	fileHandle_t;
-
-typedef void (*xfunction_t)();
-
-typedef struct scr_function_s
-{
-	const char      *name;
-	xfunction_t     call;
-	int             developer;
-} scr_function_t;
-
-typedef void (*xmethod_t)(int);
-
-typedef struct scr_method_s
-{
-	const char     *name;
-	xmethod_t      call;
-	int            developer;
-} scr_method_t;
-
-typedef enum
-{
-	EV_NONE = 0,
-	EV_FOOTSTEP_RUN_DEFAULT,
-	EV_FOOTSTEP_RUN_BARK,
-	EV_FOOTSTEP_RUN_BRICK,
-	EV_FOOTSTEP_RUN_CARPET,
-	EV_FOOTSTEP_RUN_CLOTH,
-	EV_FOOTSTEP_RUN_CONCRETE,
-	EV_FOOTSTEP_RUN_DIRT,
-	EV_FOOTSTEP_RUN_FLESH,
-	EV_FOOTSTEP_RUN_FOLIAGE,
-	EV_FOOTSTEP_RUN_GLASS,
-	EV_FOOTSTEP_RUN_GRASS,
-	EV_FOOTSTEP_RUN_GRAVEL,
-	EV_FOOTSTEP_RUN_ICE,
-	EV_FOOTSTEP_RUN_METAL,
-	EV_FOOTSTEP_RUN_MUD,
-	EV_FOOTSTEP_RUN_PAPER,
-	EV_FOOTSTEP_RUN_PLASTER,
-	EV_FOOTSTEP_RUN_ROCK,
-	EV_FOOTSTEP_RUN_SAND,
-	EV_FOOTSTEP_RUN_SNOW,
-	EV_FOOTSTEP_RUN_WATER,
-	EV_FOOTSTEP_RUN_WOOD,
-	EV_FOOTSTEP_RUN_ASPHALT,
-	EV_FOOTSTEP_WALK_DEFAULT,
-	EV_FOOTSTEP_WALK_BARK,
-	EV_FOOTSTEP_WALK_BRICK,
-	EV_FOOTSTEP_WALK_CARPET,
-	EV_FOOTSTEP_WALK_CLOTH,
-	EV_FOOTSTEP_WALK_CONCRETE,
-	EV_FOOTSTEP_WALK_DIRT,
-	EV_FOOTSTEP_WALK_FLESH,
-	EV_FOOTSTEP_WALK_FOLIAGE,
-	EV_FOOTSTEP_WALK_GLASS,
-	EV_FOOTSTEP_WALK_GRASS,
-	EV_FOOTSTEP_WALK_GRAVEL,
-	EV_FOOTSTEP_WALK_ICE,
-	EV_FOOTSTEP_WALK_METAL,
-	EV_FOOTSTEP_WALK_MUD,
-	EV_FOOTSTEP_WALK_PAPER,
-	EV_FOOTSTEP_WALK_PLASTER,
-	EV_FOOTSTEP_WALK_ROCK,
-	EV_FOOTSTEP_WALK_SAND,
-	EV_FOOTSTEP_WALK_SNOW,
-	EV_FOOTSTEP_WALK_WATER,
-	EV_FOOTSTEP_WALK_WOOD,
-	EV_FOOTSTEP_WALK_ASPHALT,
-	EV_FOOTSTEP_PRONE_DEFAULT,
-	EV_FOOTSTEP_PRONE_BARK,
-	EV_FOOTSTEP_PRONE_BRICK,
-	EV_FOOTSTEP_PRONE_CARPET,
-	EV_FOOTSTEP_PRONE_CLOTH,
-	EV_FOOTSTEP_PRONE_CONCRETE,
-	EV_FOOTSTEP_PRONE_DIRT,
-	EV_FOOTSTEP_PRONE_FLESH,
-	EV_FOOTSTEP_PRONE_FOLIAGE,
-	EV_FOOTSTEP_PRONE_GLASS,
-	EV_FOOTSTEP_PRONE_GRASS,
-	EV_FOOTSTEP_PRONE_GRAVEL,
-	EV_FOOTSTEP_PRONE_ICE,
-	EV_FOOTSTEP_PRONE_METAL,
-	EV_FOOTSTEP_PRONE_MUD,
-	EV_FOOTSTEP_PRONE_PAPER,
-	EV_FOOTSTEP_PRONE_PLASTER,
-	EV_FOOTSTEP_PRONE_ROCK,
-	EV_FOOTSTEP_PRONE_SAND,
-	EV_FOOTSTEP_PRONE_SNOW,
-	EV_FOOTSTEP_PRONE_WATER,
-	EV_FOOTSTEP_PRONE_WOOD,
-	EV_FOOTSTEP_PRONE_ASPHALT,
-	EV_JUMP_DEFAULT,
-	EV_JUMP_BARK,
-	EV_JUMP_BRICK,
-	EV_JUMP_CARPET,
-	EV_JUMP_CLOTH,
-	EV_JUMP_CONCRETE,
-	EV_JUMP_DIRT,
-	EV_JUMP_FLESH,
-	EV_JUMP_FOLIAGE,
-	EV_JUMP_GLASS,
-	EV_JUMP_GRASS,
-	EV_JUMP_GRAVEL,
-	EV_JUMP_ICE,
-	EV_JUMP_METAL,
-	EV_JUMP_MUD,
-	EV_JUMP_PAPER,
-	EV_JUMP_PLASTER,
-	EV_JUMP_ROCK,
-	EV_JUMP_SAND,
-	EV_JUMP_SNOW,
-	EV_JUMP_WATER,
-	EV_JUMP_WOOD,
-	EV_JUMP_ASPHALT,
-	EV_LANDING_DEFAULT,
-	EV_LANDING_BARK,
-	EV_LANDING_BRICK,
-	EV_LANDING_CARPET,
-	EV_LANDING_CLOTH,
-	EV_LANDING_CONCRETE,
-	EV_LANDING_DIRT,
-	EV_LANDING_FLESH,
-	EV_LANDING_FOLIAGE,
-	EV_LANDING_GLASS,
-	EV_LANDING_GRASS,
-	EV_LANDING_GRAVEL,
-	EV_LANDING_ICE,
-	EV_LANDING_METAL,
-	EV_LANDING_MUD,
-	EV_LANDING_PAPER,
-	EV_LANDING_PLASTER,
-	EV_LANDING_ROCK,
-	EV_LANDING_SAND,
-	EV_LANDING_SNOW,
-	EV_LANDING_WATER,
-	EV_LANDING_WOOD,
-	EV_LANDING_ASPHALT,
-	EV_LANDING_PAIN_DEFAULT,
-	EV_LANDING_PAIN_BARK,
-	EV_LANDING_PAIN_BRICK,
-	EV_LANDING_PAIN_CARPET,
-	EV_LANDING_PAIN_CLOTH,
-	EV_LANDING_PAIN_CONCRETE,
-	EV_LANDING_PAIN_DIRT,
-	EV_LANDING_PAIN_FLESH,
-	EV_LANDING_PAIN_FOLIAGE,
-	EV_LANDING_PAIN_GLASS,
-	EV_LANDING_PAIN_GRASS,
-	EV_LANDING_PAIN_GRAVEL,
-	EV_LANDING_PAIN_ICE,
-	EV_LANDING_PAIN_METAL,
-	EV_LANDING_PAIN_MUD,
-	EV_LANDING_PAIN_PAPER,
-	EV_LANDING_PAIN_PLASTER,
-	EV_LANDING_PAIN_ROCK,
-	EV_LANDING_PAIN_SAND,
-	EV_LANDING_PAIN_SNOW,
-	EV_LANDING_PAIN_WATER,
-	EV_LANDING_PAIN_WOOD,
-	EV_LANDING_PAIN_ASPHALT,
-	EV_FOLIAGE_SOUND,
-	EV_STANCE_FORCE_STAND,
-	EV_STANCE_FORCE_CROUCH,
-	EV_STANCE_FORCE_PRONE,
-	EV_STEP_VIEW,
-	EV_ITEM_PICKUP,
-	EV_AMMO_PICKUP,
-	EV_NOAMMO,
-	EV_EMPTYCLIP,
-	EV_EMPTY_OFFHAND,
-	EV_RESET_ADS,
-	EV_RELOAD,
-	EV_RELOAD_FROM_EMPTY,
-	EV_RELOAD_START,
-	EV_RELOAD_END,
-	EV_RAISE_WEAPON,
-	EV_PUTAWAY_WEAPON,
-	EV_WEAPON_ALT,
-	EV_PULLBACK_WEAPON,
-	EV_FIRE_WEAPON,
-	EV_FIRE_WEAPONB,
-	EV_FIRE_WEAPON_LASTSHOT,
-	EV_RECHAMBER_WEAPON,
-	EV_EJECT_BRASS,
-	EV_MELEE_SWIPE,
-	EV_FIRE_MELEE,
-	EV_PREP_OFFHAND,
-	EV_USE_OFFHAND,
-	EV_SWITCH_OFFHAND,
-	EV_BINOCULAR_ENTER,
-	EV_BINOCULAR_EXIT,
-	EV_BINOCULAR_FIRE,
-	EV_BINOCULAR_RELEASE,
-	EV_BINOCULAR_DROP,
-	EV_MELEE_HIT,
-	EV_MELEE_MISS,
-	EV_FIRE_WEAPON_MG42,
-	EV_FIRE_QUADBARREL_1,
-	EV_FIRE_QUADBARREL_2,
-	EV_BULLET_TRACER,
-	EV_SOUND_ALIAS,
-	EV_SOUND_ALIAS_AS_MASTER,
-	EV_BULLET_HIT_SMALL,
-	EV_BULLET_HIT_LARGE,
-	EV_SHOTGUN_HIT,
-	EV_BULLET_HIT_AP,
-	EV_BULLET_HIT_CLIENT_SMALL,
-	EV_BULLET_HIT_CLIENT_LARGE,
-	EV_GRENADE_BOUNCE,
-	EV_GRENADE_EXPLODE,
-	EV_ROCKET_EXPLODE,
-	EV_ROCKET_EXPLODE_NOMARKS,
-	EV_CUSTOM_EXPLODE,
-	EV_CUSTOM_EXPLODE_NOMARKS,
-	EV_BULLET,
-	EV_PLAY_FX,
-	EV_PLAY_FX_ON_TAG,
-	EV_EARTHQUAKE,
-	EV_GRENADE_SUICIDE,
-	EV_OBITUARY
-} entity_event_t;
-
-typedef enum
-{
-	TRACE_HITTYPE_NONE = 0x0,
-	TRACE_HITTYPE_ENTITY = 0x1,
-	TRACE_HITTYPE_DYNENT_MODEL = 0x2,
-	TRACE_HITTYPE_DYNENT_BRUSH = 0x3,
-	TRACE_HITTYPE_GLASS = 0x4
-} TraceHitType;
-
-typedef struct trace_s
-{
-	float fraction;
-	vec3_t normal;
-	int surfaceFlags;
-	int contents;
-	const char *material;
-	TraceHitType hitType;
-	u_int16_t hitId;
-	u_int16_t modelIndex;
-	u_int16_t partName;
-	u_int16_t partGroup;
-	byte allsolid;
-	byte startsolid;
-	byte walkable;
-	byte padding;
-} trace_t;
-
-typedef struct leakyBucket_s leakyBucket_t;
-struct leakyBucket_s
-{
-	netadrtype_t type;
-	unsigned char adr[4];
-	int	lastTime;
-	signed char	burst;
-	long hash;
-	leakyBucket_t *prev, *next;
-};
-
-typedef struct usercmd_s
-{
-	int serverTime;
-	int buttons;
-	int angles[3];
-	byte weapon;
-	byte offHandIndex;
-	char forwardmove;
-	char rightmove;
-	float meleeChargeYaw;
-	byte meleeChargeDist;
-	byte selectedLocation[2];
-	byte pad;
-} usercmd_t;
-
-typedef struct
-{
-	int			outgoingSequence;
-	netsrc_t	sock;
-	int			dropped;
-	int			incomingSequence;
-	netadr_t	remoteAddress;
-	unsigned short			qport;
-	unsigned short			upperqport;
-	int			fragmentSequence;
-	int			fragmentLength;
-	byte		*fragmentBuffer;
-	int			fragmentBufferSize;
-	qboolean	unsentFragments;
-	int			unsentFragmentStart;
-	int			unsentLength;
-	byte		*unsentBuffer;
-	int			unsentBufferSize;
-} netchan_t;
-
-typedef struct
-{
-	char command[1024];
-	int cmdTime;
-	int cmdType;
-} reliableCommands_t;
-
-#define MAX_DOWNLOAD_BLKSIZE 1024
-#define MAX_DOWNLOAD_WINDOW 8
-
-typedef struct client_s
-{
-	clientState_t	state;
-	int				unknown4;
-	int				unknown8;
-	char			userinfo[1024];
-	reliableCommands_t	reliableCommands[128];
-	int				reliableSequence;
-	int				reliableAcknowledge;
-	int				reliableSent;
-	int				messageAcknowledge;
-	int				gamestateMessageNum;
-	int				challenge;
-	usercmd_t  	 	lastUsercmd;
-	int				lastClientCommand;
-	char			lastClientCommandString[1024];
-	int 			gentity;
-	char 			name[32];
-	char			downloadName[64];
-	fileHandle_t	download;
-	int				downloadSize;
-	int				downloadCount;
-	int				downloadClientBlock;
-	int				downloadCurrentBlock;
-	int				downloadXmitBlock;
-	unsigned char	*downloadBlocks[MAX_DOWNLOAD_WINDOW];
-	int				downloadBlockSize[MAX_DOWNLOAD_WINDOW];
-	qboolean		downloadEOF;
-	int				downloadSendTime;
-#if COD_VERSION == COD2_1_2 || COD_VERSION == COD2_1_3
-	char			wwwDownloadURL[256];
-	qboolean		wwwDownload;
-	qboolean		wwwDownloadStarted;
-	qboolean		wwwDlAck;
-	qboolean		wwwDl_failed;
-#endif
-	int				deltaMessage;
-	int				nextReliableTime;
-	int				lastPacketTime;
-	int				lastConnectTime;
-	int				nextSnapshotTime;
-	qboolean		rateDelayed;
-	int				timeoutCount;
-	char 			unknown317564[317564];
-	int				ping;
-	int				rate;
-	int				snapshotMsec;
-	int				pureAuthentic;
-	netchan_t		netchan;
-#if COD_VERSION == COD2_1_0 || COD_VERSION == COD2_1_2
-	char 			unknown32756[32756];
-#elif COD_VERSION == COD2_1_3
-	char 			unknown262132[262132];
-#endif
-	int 			guid;
-#if COD_VERSION == COD2_1_0 || COD_VERSION == COD2_1_2
-	char 			unknown10528[10528];
-#elif COD_VERSION == COD2_1_3
-	char 			unknown10592[10592];
-#endif
-} client_t;
-
-typedef struct
-{
-	netadr_t adr;
-	int challenge;
-	int time;
-	int pingTime;
-	int firstTime;
-	int firstPing;
-	qboolean connected;
-	int guid;
-#if COD_VERSION == COD2_1_2 || COD_VERSION == COD2_1_3
-	char unknown68[68];
-#endif
-} challenge_t;
-
-typedef struct
-{
-	qboolean	initialized;
-	int			time;
-	int			snapFlagServerBit;
-	client_t	*clients;
-	int			numSnapshotEntities;
-	int			nextSnapshotEntities;
-	int			unknown15[15];
-	int			nextHeartbeatTime;
-	int 		nextStatusResponseTime;
-	challenge_t	challenges[1024];
-	netadr_t	redirectAddress;
-	netadr_t	authorizeAddress;
-} serverStatic_t;
-
-typedef xfunction_t (*Scr_GetFunction_t)(const char** v_function, int* v_developer);
+typedef xfunction_t (*Scr_GetFunction_t)(const char** v_functionName, qboolean* v_developer);
 #if COD_VERSION == COD2_1_0
 static const Scr_GetFunction_t Scr_GetFunction = (Scr_GetFunction_t)0x08115824;
 #elif COD_VERSION == COD2_1_2
@@ -784,13 +174,22 @@ static const Scr_GetFunction_t Scr_GetFunction = (Scr_GetFunction_t)0x08117B56;
 static const Scr_GetFunction_t Scr_GetFunction = (Scr_GetFunction_t)0x08117CB2;
 #endif
 
-typedef xmethod_t (*Scr_GetMethod_t)(const char** v_method, int* v_developer);
+typedef xmethod_t (*Scr_GetMethod_t)(const char** v_methodName, qboolean* v_developer);
 #if COD_VERSION == COD2_1_0
 static const Scr_GetMethod_t Scr_GetMethod = (Scr_GetMethod_t)0x0811595C;
 #elif COD_VERSION == COD2_1_2
 static const Scr_GetMethod_t Scr_GetMethod = (Scr_GetMethod_t)0x08117C8E;
 #elif COD_VERSION == COD2_1_3
 static const Scr_GetMethod_t Scr_GetMethod = (Scr_GetMethod_t)0x08117DEA;
+#endif
+
+typedef void (*Cvar_SetString_t)(cvar_t* var, char const* string);
+#if COD_VERSION == COD2_1_0
+static const Cvar_SetString_t Cvar_SetString = (Cvar_SetString_t)0x080B2560;
+#elif COD_VERSION == COD2_1_2
+static const Cvar_SetString_t Cvar_SetString = (Cvar_SetString_t)0x080B493C;
+#elif COD_VERSION == COD2_1_3
+static const Cvar_SetString_t Cvar_SetString = (Cvar_SetString_t)0x080B4A80;
 #endif
 
 typedef cvar_t* (*Cvar_FindVar_t)(const char *var_name);
@@ -802,7 +201,7 @@ static const Cvar_FindVar_t Cvar_FindVar = (Cvar_FindVar_t)0x080B2D94;
 static const Cvar_FindVar_t Cvar_FindVar = (Cvar_FindVar_t)0x080B2ED8;
 #endif
 
-typedef cvar_t* (*Cvar_RegisterBool_t)(const char *var_name, bool var_value, unsigned short flags);
+typedef cvar_t* (*Cvar_RegisterBool_t)(const char *var_name, qboolean var_value, unsigned short flags);
 #if COD_VERSION == COD2_1_0
 static const Cvar_RegisterBool_t Cvar_RegisterBool = (Cvar_RegisterBool_t)0x080B1B72;
 #elif COD_VERSION == COD2_1_2
@@ -847,7 +246,7 @@ static const SV_GameSendServerCommand_t SV_GameSendServerCommand = (SV_GameSendS
 static const SV_GameSendServerCommand_t SV_GameSendServerCommand = (SV_GameSendServerCommand_t)0x080917AA;
 #endif
 
-typedef void (*SV_DropClient_t)(int a1, char* reason);
+typedef void (*SV_DropClient_t)(client_t *drop, const char *reason);
 #if COD_VERSION == COD2_1_0
 static const SV_DropClient_t SV_DropClient = (SV_DropClient_t)0x0808DC8C;
 #elif COD_VERSION == COD2_1_2
@@ -856,7 +255,7 @@ static const SV_DropClient_t SV_DropClient = (SV_DropClient_t)0x0808EF9A;
 static const SV_DropClient_t SV_DropClient = (SV_DropClient_t)0x0808F02E;
 #endif
 
-typedef void (*ClientUserinfoChanged_t)(int a1);
+typedef void (*ClientUserinfoChanged_t)(int clientNum);
 #if COD_VERSION == COD2_1_0
 static const ClientUserinfoChanged_t ClientUserinfoChanged = (ClientUserinfoChanged_t)0x080F6506;
 #elif COD_VERSION == COD2_1_2
@@ -865,13 +264,22 @@ static const ClientUserinfoChanged_t ClientUserinfoChanged = (ClientUserinfoChan
 static const ClientUserinfoChanged_t ClientUserinfoChanged = (ClientUserinfoChanged_t)0x080F8C5E;
 #endif
 
-typedef int (*SV_ClientHasClientMuted_t)(int a1, int a2);
+typedef int (*SV_ClientHasClientMuted_t)(int clientnum, int mutedclientnum);
 #if COD_VERSION == COD2_1_0
 static const SV_ClientHasClientMuted_t SV_ClientHasClientMuted = (SV_ClientHasClientMuted_t)0x0809A01E;
 #elif COD_VERSION == COD2_1_2
 static const SV_ClientHasClientMuted_t SV_ClientHasClientMuted = (SV_ClientHasClientMuted_t)0x0809C0B6;
 #elif COD_VERSION == COD2_1_3
 static const SV_ClientHasClientMuted_t SV_ClientHasClientMuted = (SV_ClientHasClientMuted_t)0x0809C1FA;
+#endif
+
+typedef int (*SV_MapExists_t)(const char *mapname);
+#if COD_VERSION == COD2_1_0
+static const SV_MapExists_t SV_MapExists = (SV_MapExists_t)0x080909EE;
+#elif COD_VERSION == COD2_1_2
+static const SV_MapExists_t SV_MapExists = (SV_MapExists_t)0x080921FE;
+#elif COD_VERSION == COD2_1_3
+static const SV_MapExists_t SV_MapExists = (SV_MapExists_t)0x08092302;
 #endif
 
 typedef void (*Info_SetValueForKey_t)(char *s, const char *key, const char *value);
@@ -883,7 +291,7 @@ static const Info_SetValueForKey_t Info_SetValueForKey = (Info_SetValueForKey_t)
 static const Info_SetValueForKey_t Info_SetValueForKey = (Info_SetValueForKey_t)0x080B85CE;
 #endif
 
-typedef char* (*Info_ValueForKey_t)(char *s, const char *key);
+typedef char* (*Info_ValueForKey_t)(const char *s, const char *key);
 #if COD_VERSION == COD2_1_0
 static const Info_ValueForKey_t Info_ValueForKey = (Info_ValueForKey_t)0x080B5B30;
 #elif COD_VERSION == COD2_1_2
@@ -892,7 +300,7 @@ static const Info_ValueForKey_t Info_ValueForKey = (Info_ValueForKey_t)0x080B7FC
 static const Info_ValueForKey_t Info_ValueForKey = (Info_ValueForKey_t)0x080B8108;
 #endif
 
-typedef short (*Scr_ExecThread_t)(int callback, int params);
+typedef short (*Scr_ExecThread_t)(int callbackHook, unsigned int numArgs);
 #if COD_VERSION == COD2_1_0
 static const Scr_ExecThread_t Scr_ExecThread = (Scr_ExecThread_t)0x0808398E;
 #elif COD_VERSION == COD2_1_2
@@ -901,7 +309,7 @@ static const Scr_ExecThread_t Scr_ExecThread = (Scr_ExecThread_t)0x08083F0A;
 static const Scr_ExecThread_t Scr_ExecThread = (Scr_ExecThread_t)0x08083FD6;
 #endif
 
-typedef short (*Scr_ExecEntThread_t)(int entity, int callback, int params);
+typedef short (*Scr_ExecEntThread_t)(gentity_t* ent, int callbackHook, unsigned int numArgs);
 #if COD_VERSION == COD2_1_0
 static const Scr_ExecEntThread_t Scr_ExecEntThread = (Scr_ExecEntThread_t)0x08118DF4;
 #elif COD_VERSION == COD2_1_2
@@ -964,7 +372,16 @@ static const NET_AdrToString_t NET_AdrToString = (NET_AdrToString_t)0x0806B1DC;
 static const NET_AdrToString_t NET_AdrToString = (NET_AdrToString_t)0x0806B1D4;
 #endif
 
-typedef void (*Scr_Error_t)(const char *a1);
+typedef qboolean (*NET_StringToAdr_t)(char *s, netadr_t *a);
+#if COD_VERSION == COD2_1_0
+static const NET_StringToAdr_t NET_StringToAdr = (NET_StringToAdr_t)0x0806C750;
+#elif COD_VERSION == COD2_1_2
+static const NET_StringToAdr_t NET_StringToAdr = (NET_StringToAdr_t)0x0806CCCC;
+#elif COD_VERSION == COD2_1_3
+static const NET_StringToAdr_t NET_StringToAdr = (NET_StringToAdr_t)0x0806CD98;
+#endif
+
+typedef void (*Scr_Error_t)(const char *string);
 #if COD_VERSION == COD2_1_0
 static const Scr_Error_t Scr_Error = (Scr_Error_t)0x08084DB4;
 #elif COD_VERSION == COD2_1_2
@@ -982,25 +399,7 @@ static const Sys_MilliSeconds_t Sys_MilliSeconds = (Sys_MilliSeconds_t)0x080D5C5
 static const Sys_MilliSeconds_t Sys_MilliSeconds = (Sys_MilliSeconds_t)0x080D5D98;
 #endif
 
-typedef long double (*calc_player_speed_t)(int a1, int a2);
-#if COD_VERSION == COD2_1_0
-static const calc_player_speed_t calc_player_speed = (calc_player_speed_t)0x080DF534;
-#elif COD_VERSION == COD2_1_2
-static const calc_player_speed_t calc_player_speed = (calc_player_speed_t)0x080E1B14;
-#elif COD_VERSION == COD2_1_3
-static const calc_player_speed_t calc_player_speed = (calc_player_speed_t)0x080E1C58;
-#endif
-
-typedef void (*calc_client_speed_t)(int client);
-#if COD_VERSION == COD2_1_0
-static const calc_client_speed_t calc_client_speed = (calc_client_speed_t)0x0811FB7A;
-#elif COD_VERSION == COD2_1_2
-static const calc_client_speed_t calc_client_speed = (calc_client_speed_t)0x08121EAE;
-#elif COD_VERSION == COD2_1_3
-static const calc_client_speed_t calc_client_speed = (calc_client_speed_t)0x0812200A;
-#endif
-
-typedef int (*G_FindConfigstringIndex_t)(const char *a1, int a2, int a3, int a4, const char *a5);
+typedef int (*G_FindConfigstringIndex_t)(const char *name, int start, int max, qboolean create, const char *fieldname);
 #if COD_VERSION == COD2_1_0
 static const G_FindConfigstringIndex_t G_FindConfigstringIndex = (G_FindConfigstringIndex_t)0x0811AE70;
 #elif COD_VERSION == COD2_1_2
@@ -1009,7 +408,7 @@ static const G_FindConfigstringIndex_t G_FindConfigstringIndex = (G_FindConfigst
 static const G_FindConfigstringIndex_t G_FindConfigstringIndex = (G_FindConfigstringIndex_t)0x0811D300;
 #endif
 
-typedef char * (*SV_GetConfigstringConst_t)(int index);
+typedef const char * (*SV_GetConfigstringConst_t)(int index);
 #if COD_VERSION == COD2_1_0
 static const SV_GetConfigstringConst_t SV_GetConfigstringConst = (SV_GetConfigstringConst_t)0x08091108;
 #elif COD_VERSION == COD2_1_2
@@ -1043,6 +442,15 @@ static const FS_Read_t FS_Read = (FS_Read_t)0x0809E328;
 static const FS_Read_t FS_Read = (FS_Read_t)0x080A03E6;
 #elif COD_VERSION == COD2_1_3
 static const FS_Read_t FS_Read = (FS_Read_t)0x080A052A;
+#endif
+
+typedef void (*MSG_Init_t)(msg_t *buf, byte *data, int length);
+#if COD_VERSION == COD2_1_0
+static const MSG_Init_t MSG_Init = (MSG_Init_t)0x08067718;
+#elif COD_VERSION == COD2_1_2
+static const MSG_Init_t MSG_Init = (MSG_Init_t)0x08067BE0;
+#elif COD_VERSION == COD2_1_3
+static const MSG_Init_t MSG_Init = (MSG_Init_t)0x08067BD8;
 #endif
 
 typedef void (*MSG_WriteByte_t)(msg_t *msg, int c);
@@ -1108,7 +516,7 @@ static const FS_iwIwd_t FS_iwIwd = (FS_iwIwd_t)0x0806532C;
 static const FS_iwIwd_t FS_iwIwd = (FS_iwIwd_t)0x08065324;
 #endif
 
-typedef signed int (*SV_WWWRedirectClient_t)(int a1, msg_t *msg);
+typedef signed int (*SV_WWWRedirectClient_t)(client_t *cl, msg_t *msg);
 #if COD_VERSION == COD2_1_0
 static const SV_WWWRedirectClient_t SV_WWWRedirectClient = (SV_WWWRedirectClient_t)0x0; // Does not exist in 1.0
 #elif COD_VERSION == COD2_1_2
@@ -1117,7 +525,7 @@ static const SV_WWWRedirectClient_t SV_WWWRedirectClient = (SV_WWWRedirectClient
 static const SV_WWWRedirectClient_t SV_WWWRedirectClient = (SV_WWWRedirectClient_t)0x0808FC0C;
 #endif
 
-typedef int (*BG_WeaponDefs_t)(int a1);
+typedef WeaponDef_t * (*BG_WeaponDefs_t)(unsigned int weaponIndex);
 #if COD_VERSION == COD2_1_0
 static const BG_WeaponDefs_t BG_WeaponDefs = (BG_WeaponDefs_t)0x080E9270;
 #elif COD_VERSION == COD2_1_2
@@ -1126,7 +534,7 @@ static const BG_WeaponDefs_t BG_WeaponDefs = (BG_WeaponDefs_t)0x080EB860;
 static const BG_WeaponDefs_t BG_WeaponDefs = (BG_WeaponDefs_t)0x080EB9A4;
 #endif
 
-typedef int (*BG_GetNumWeapons_t)();
+typedef int (*BG_GetNumWeapons_t)(void);
 #if COD_VERSION == COD2_1_0
 static const BG_GetNumWeapons_t BG_GetNumWeapons = (BG_GetNumWeapons_t)0x080E9322;
 #elif COD_VERSION == COD2_1_2
@@ -1171,15 +579,6 @@ static const runtimeError_t runtimeError = (runtimeError_t)0x08078710;
 static const runtimeError_t runtimeError = (runtimeError_t)0x080787DC;
 #endif
 
-typedef int (*Touch_Item_Auto_t)(int a1, int a2, int a3);
-#if COD_VERSION == COD2_1_0
-static const Touch_Item_Auto_t Touch_Item_Auto = (Touch_Item_Auto_t)0x081037F0;
-#elif COD_VERSION == COD2_1_2
-static const Touch_Item_Auto_t Touch_Item_Auto = (Touch_Item_Auto_t)0x08105B24;
-#elif COD_VERSION == COD2_1_3
-static const Touch_Item_Auto_t Touch_Item_Auto = (Touch_Item_Auto_t)0x08105C80;
-#endif
-
 typedef int (*BG_AnimationIndexForString_t)(char *src);
 #if COD_VERSION == COD2_1_0
 static const BG_AnimationIndexForString_t BG_AnimationIndexForString = (BG_AnimationIndexForString_t)0x080D46AC;
@@ -1207,15 +606,6 @@ static const Scr_IsSystemActive_t Scr_IsSystemActive = (Scr_IsSystemActive_t)0x0
 static const Scr_IsSystemActive_t Scr_IsSystemActive = (Scr_IsSystemActive_t)0x08084678;
 #endif
 
-typedef void (*LookAtKiller_t)(int self, int inflictor, int attacker);
-#if COD_VERSION == COD2_1_0
-static const LookAtKiller_t LookAtKiller = (LookAtKiller_t)0x080FF17A;
-#elif COD_VERSION == COD2_1_2
-static const LookAtKiller_t LookAtKiller = (LookAtKiller_t)0x081014AE;
-#elif COD_VERSION == COD2_1_3
-static const LookAtKiller_t LookAtKiller = (LookAtKiller_t)0x0810160A;
-#endif
-
 typedef int (*Sys_GetValue_t)(int key);
 #if COD_VERSION == COD2_1_0
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D44A4;
@@ -1223,6 +613,15 @@ static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D44A4;
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D6A7C;
 #elif COD_VERSION == COD2_1_3
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D6BC0;
+#endif
+
+typedef void (*Scr_AddBool_t)(qboolean);
+#if COD_VERSION == COD2_1_0
+static const Scr_AddBool_t Scr_AddBool = (Scr_AddBool_t)0x08084AF8;
+#elif COD_VERSION == COD2_1_2
+static const Scr_AddBool_t Scr_AddBool = (Scr_AddBool_t)0x08085074;
+#elif COD_VERSION == COD2_1_3
+static const Scr_AddBool_t Scr_AddBool = (Scr_AddBool_t)0x08085140;
 #endif
 
 typedef void (*Scr_AddInt_t)(int value);
@@ -1270,7 +669,7 @@ static const Scr_AddVector_t Scr_AddVector = (Scr_AddVector_t)0x0808523A;
 static const Scr_AddVector_t Scr_AddVector = (Scr_AddVector_t)0x08085306;
 #endif
 
-typedef void (*Scr_AddEntity_t)(int entity);
+typedef void (*Scr_AddEntity_t)(gentity_t* ent);
 #if COD_VERSION == COD2_1_0
 static const Scr_AddEntity_t Scr_AddEntity = (Scr_AddEntity_t)0x08118CC0;
 #elif COD_VERSION == COD2_1_2
@@ -1306,7 +705,7 @@ static const Scr_AddObject_t Scr_AddObject = (Scr_AddObject_t)0x0808511E;
 static const Scr_AddObject_t Scr_AddObject = (Scr_AddObject_t)0x080851EA;
 #endif
 
-typedef int (*G_TempEntity_t)(vec3_t origin, int event);
+typedef gentity_t * (*G_TempEntity_t)(vec3_t origin, int event);
 #if COD_VERSION == COD2_1_0
 static const G_TempEntity_t G_TempEntity = (G_TempEntity_t)0x0811CB34;
 #elif COD_VERSION == COD2_1_2
@@ -1333,13 +732,193 @@ static const G_LocationalTrace_t G_LocationalTrace = (G_LocationalTrace_t)0x0810
 static const G_LocationalTrace_t G_LocationalTrace = (G_LocationalTrace_t)0x0810A5CC;
 #endif
 
-typedef void (*G_AddEvent_t)(int ent, int event, int eventParm);
+typedef void (*G_AddEvent_t)(gentity_t *ent, int event, int eventParm);
 #if COD_VERSION == COD2_1_0
 static const G_AddEvent_t G_AddEvent = (G_AddEvent_t)0x0811CDA2;
 #elif COD_VERSION == COD2_1_2
 static const G_AddEvent_t G_AddEvent = (G_AddEvent_t)0x0811F0D6;
 #elif COD_VERSION == COD2_1_3
 static const G_AddEvent_t G_AddEvent = (G_AddEvent_t)0x0811F232;
+#endif
+
+typedef void (*G_AddPredictableEvent_t)(gentity_t *ent, int event, int eventParm);
+#if COD_VERSION == COD2_1_0
+static const G_AddPredictableEvent_t G_AddPredictableEvent = (G_AddPredictableEvent_t)0x0811CD6C;
+#elif COD_VERSION == COD2_1_2
+static const G_AddPredictableEvent_t G_AddPredictableEvent = (G_AddPredictableEvent_t)0x0811F0A0;
+#elif COD_VERSION == COD2_1_3
+static const G_AddPredictableEvent_t G_AddPredictableEvent = (G_AddPredictableEvent_t)0x0811F1FC;
+#endif
+
+typedef playerState_t * (*SV_GameClientNum_t)(int num);
+#if COD_VERSION == COD2_1_0
+static const SV_GameClientNum_t SV_GameClientNum = (SV_GameClientNum_t)0x0808FE02;
+#elif COD_VERSION == COD2_1_2
+static const SV_GameClientNum_t SV_GameClientNum = (SV_GameClientNum_t)0x08091612;
+#elif COD_VERSION == COD2_1_3
+static const SV_GameClientNum_t SV_GameClientNum = (SV_GameClientNum_t)0x08091716;
+#endif
+
+typedef gentity_t * (*SV_GentityNum_t)(int num);
+#if COD_VERSION == COD2_1_0
+static const SV_GentityNum_t SV_GentityNum = (SV_GentityNum_t)0x0808FDE4;
+#elif COD_VERSION == COD2_1_2
+static const SV_GentityNum_t SV_GentityNum = (SV_GentityNum_t)0x080915F4;
+#elif COD_VERSION == COD2_1_3
+static const SV_GentityNum_t SV_GentityNum = (SV_GentityNum_t)0x080916F8;
+#endif
+
+typedef gentity_t * (*SV_ClientThink_t)(client_t *cl, usercmd_t *);
+#if COD_VERSION == COD2_1_0
+static const SV_ClientThink_t SV_ClientThink = (SV_ClientThink_t)0x0808F488;
+#elif COD_VERSION == COD2_1_2
+static const SV_ClientThink_t SV_ClientThink = (SV_ClientThink_t)0x08090D18;
+#elif COD_VERSION == COD2_1_3
+static const SV_ClientThink_t SV_ClientThink = (SV_ClientThink_t)0x08090DAC;
+#endif
+
+typedef void (*G_LogPrintf_t)(const char *fmt, ...);
+#if COD_VERSION == COD2_1_0
+static const G_LogPrintf_t G_LogPrintf = (G_LogPrintf_t)0x08107502;
+#elif COD_VERSION == COD2_1_2
+static const G_LogPrintf_t G_LogPrintf = (G_LogPrintf_t)0x08109836;
+#elif COD_VERSION == COD2_1_3
+static const G_LogPrintf_t G_LogPrintf = (G_LogPrintf_t)0x08109992;
+#endif
+
+typedef char * (*I_strlwr_t)(char *s1);
+#if COD_VERSION == COD2_1_0
+static const I_strlwr_t I_strlwr = (I_strlwr_t)0x080B573C;
+#elif COD_VERSION == COD2_1_2
+static const I_strlwr_t I_strlwr = (I_strlwr_t)0x080B7BD0;
+#elif COD_VERSION == COD2_1_3
+static const I_strlwr_t I_strlwr = (I_strlwr_t)0x080B7D14;
+#endif
+
+typedef char * (*I_strupr_t)(char *s1);
+#if COD_VERSION == COD2_1_0
+static const I_strupr_t I_strupr = (I_strupr_t)0x080B577E;
+#elif COD_VERSION == COD2_1_2
+static const I_strupr_t I_strupr = (I_strupr_t)0x080B7C12;
+#elif COD_VERSION == COD2_1_3
+static const I_strupr_t I_strupr = (I_strupr_t)0x080B7D56;
+#endif
+
+typedef gentity_t * (*G_Spawn_t)(void);
+#if COD_VERSION == COD2_1_0
+static const G_Spawn_t G_Spawn = (G_Spawn_t)0x0811C546;
+#elif COD_VERSION == COD2_1_2
+static const G_Spawn_t G_Spawn = (G_Spawn_t)0x0811E87A;
+#elif COD_VERSION == COD2_1_3
+static const G_Spawn_t G_Spawn = (G_Spawn_t)0x0811E9D6;
+#endif
+
+typedef void (*SV_LinkEntity_t)(gentity_t *ent);
+#if COD_VERSION == COD2_1_0
+static const SV_LinkEntity_t SV_LinkEntity = (SV_LinkEntity_t)0x0809A45E;
+#elif COD_VERSION == COD2_1_2
+static const SV_LinkEntity_t SV_LinkEntity = (SV_LinkEntity_t)0x0809C4F6;
+#elif COD_VERSION == COD2_1_3
+static const SV_LinkEntity_t SV_LinkEntity = (SV_LinkEntity_t)0x0809C63A;
+#endif
+
+typedef void (*SV_UnlinkEntity_t)(gentity_t *ent);
+#if COD_VERSION == COD2_1_0
+static const SV_UnlinkEntity_t SV_UnlinkEntity = (SV_UnlinkEntity_t)0x0809A3BA;
+#elif COD_VERSION == COD2_1_2
+static const SV_UnlinkEntity_t SV_UnlinkEntity = (SV_UnlinkEntity_t)0x0809C452;
+#elif COD_VERSION == COD2_1_3
+static const SV_UnlinkEntity_t SV_UnlinkEntity = (SV_UnlinkEntity_t)0x0809C596;
+#endif
+
+typedef void (*SV_SetBrushModel_t)(gentity_t *ent);
+#if COD_VERSION == COD2_1_0
+static const SV_SetBrushModel_t SV_SetBrushModel = (SV_SetBrushModel_t)0x0808FF44;
+#elif COD_VERSION == COD2_1_2
+static const SV_SetBrushModel_t SV_SetBrushModel = (SV_SetBrushModel_t)0x08091754;
+#elif COD_VERSION == COD2_1_3
+static const SV_SetBrushModel_t SV_SetBrushModel = (SV_SetBrushModel_t)0x08091858;
+#endif
+
+typedef void (*Scr_SetString_t)(unsigned short *strindexptr, unsigned const stringindex);
+#if COD_VERSION == COD2_1_0
+static const Scr_SetString_t Scr_SetString = (Scr_SetString_t)0x08079790;
+#elif COD_VERSION == COD2_1_2
+static const Scr_SetString_t Scr_SetString = (Scr_SetString_t)0x08079D14;
+#elif COD_VERSION == COD2_1_3
+static const Scr_SetString_t Scr_SetString = (Scr_SetString_t)0x08079DE0;
+#endif
+
+typedef gitem_t * (*BG_FindItemForWeapon_t)(unsigned int weaponIndex);
+#if COD_VERSION == COD2_1_0
+static const BG_FindItemForWeapon_t BG_FindItemForWeapon = (BG_FindItemForWeapon_t)0x080DCAE6;
+#elif COD_VERSION == COD2_1_2
+static const BG_FindItemForWeapon_t BG_FindItemForWeapon = (BG_FindItemForWeapon_t)0x080DF0C6;
+#elif COD_VERSION == COD2_1_3
+static const BG_FindItemForWeapon_t BG_FindItemForWeapon = (BG_FindItemForWeapon_t)0x080DF20A;
+#endif
+
+typedef XModel_t * (*SV_XModelGet_t)(const char *name);
+#if COD_VERSION == COD2_1_0
+static const SV_XModelGet_t SV_XModelGet = (SV_XModelGet_t)0x08090534;
+#elif COD_VERSION == COD2_1_2
+static const SV_XModelGet_t SV_XModelGet = (SV_XModelGet_t)0x08091D44;
+#elif COD_VERSION == COD2_1_3
+static const SV_XModelGet_t SV_XModelGet = (SV_XModelGet_t)0x08091E48;
+#endif
+
+typedef XModel_t * (*SV_XModelForIndex_t)(unsigned int modelIndex);
+#if COD_VERSION == COD2_1_0
+static const SV_XModelForIndex_t SV_XModelForIndex = (SV_XModelForIndex_t)0x0811B0F8;
+#elif COD_VERSION == COD2_1_2
+static const SV_XModelForIndex_t SV_XModelForIndex = (SV_XModelForIndex_t)0x0811D42C;
+#elif COD_VERSION == COD2_1_3
+static const SV_XModelForIndex_t SV_XModelForIndex = (SV_XModelForIndex_t)0x0811D588;
+#endif
+
+typedef qboolean (*SV_DObjExists_t)(gentity_t *ent);
+#if COD_VERSION == COD2_1_0
+static const SV_DObjExists_t SV_DObjExists = (SV_DObjExists_t)0x08090A5A;
+#elif COD_VERSION == COD2_1_2
+static const SV_DObjExists_t SV_DObjExists = (SV_DObjExists_t)0x0809226A;
+#elif COD_VERSION == COD2_1_3
+static const SV_DObjExists_t SV_DObjExists = (SV_DObjExists_t)0x0809236E;
+#endif
+
+typedef DObj_t * (*Com_GetServerDObj_t)(int entNum);
+#if COD_VERSION == COD2_1_0
+static const Com_GetServerDObj_t Com_GetServerDObj = (Com_GetServerDObj_t)0x0806289C;
+#elif COD_VERSION == COD2_1_2
+static const Com_GetServerDObj_t Com_GetServerDObj = (Com_GetServerDObj_t)0x08062BCC;
+#elif COD_VERSION == COD2_1_3
+static const Com_GetServerDObj_t Com_GetServerDObj = (Com_GetServerDObj_t)0x08062BC4;
+#endif
+
+typedef void (*SV_DObjDumpInfo_t)(gentity_t *ent);
+#if COD_VERSION == COD2_1_0
+static const SV_DObjDumpInfo_t SV_DObjDumpInfo = (SV_DObjDumpInfo_t)0x08090584;
+#elif COD_VERSION == COD2_1_2
+static const SV_DObjDumpInfo_t SV_DObjDumpInfo = (SV_DObjDumpInfo_t)0x08091D94;
+#elif COD_VERSION == COD2_1_3
+static const SV_DObjDumpInfo_t SV_DObjDumpInfo = (SV_DObjDumpInfo_t)0x08091E98;
+#endif
+
+typedef qboolean (*DObjSkelExists_t)(DObj_t *dobj, int skelTimeStamp);
+#if COD_VERSION == COD2_1_0
+static const DObjSkelExists_t DObjSkelExists = (DObjSkelExists_t)0x080B83A2;
+#elif COD_VERSION == COD2_1_2
+static const DObjSkelExists_t DObjSkelExists = (DObjSkelExists_t)0x080BA836;
+#elif COD_VERSION == COD2_1_3
+static const DObjSkelExists_t DObjSkelExists = (DObjSkelExists_t)0x080BA97A;
+#endif
+
+typedef void (*BG_EvaluateTrajectory_t)(const trajectory_t *tr, int atTime, vec3_t result);
+#if COD_VERSION == COD2_1_0
+static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTrajectory_t)0x080DCEB0;
+#elif COD_VERSION == COD2_1_2
+static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTrajectory_t)0x080DF490;
+#elif COD_VERSION == COD2_1_3
+static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTrajectory_t)0x080DF5D4;
 #endif
 
 #endif

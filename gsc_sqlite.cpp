@@ -5,9 +5,6 @@
 #include <sqlite3.h>
 #include <pthread.h>
 
-#define INVALID_ENTITY -1
-#define INVALID_STATE 0
-
 #define MAX_SQLITE_FIELDS 128
 #define MAX_SQLITE_ROWS 128
 #define MAX_SQLITE_ROW_LENGTH 256
@@ -48,8 +45,8 @@ struct async_sqlite_task
 	char stringValue[COD2_MAX_STRINGLENGTH];
 	vec3_t vectorValue;
 	unsigned int objectValue;
-	int entityNum;
-	int entityState;
+	bool hasentity;
+	gentity_t *gentity;
 };
 
 struct sqlite_db_store
@@ -61,12 +58,12 @@ struct sqlite_db_store
 
 async_sqlite_task *first_async_sqlite_task = NULL;
 sqlite_db_store *first_sqlite_db_store = NULL;
-pthread_mutex_t lock_async_sqlite_server_spawn;
+pthread_mutex_t async_sqlite_server_spawn;
 int async_sqlite_initialized = 0;
 
 void free_sqlite_db_stores_and_tasks()
 {
-	pthread_mutex_lock(&lock_async_sqlite_server_spawn);
+	pthread_mutex_lock(&async_sqlite_server_spawn);
 
 	async_sqlite_task *current = first_async_sqlite_task;
 
@@ -110,14 +107,14 @@ void free_sqlite_db_stores_and_tasks()
 		delete store;
 	}
 
-	pthread_mutex_unlock(&lock_async_sqlite_server_spawn);
+	pthread_mutex_unlock(&async_sqlite_server_spawn);
 }
 
 void *async_sqlite_query_handler(void* dummy)
 {
 	while(1)
 	{
-		pthread_mutex_lock(&lock_async_sqlite_server_spawn);
+		pthread_mutex_lock(&async_sqlite_server_spawn);
 
 		async_sqlite_task *current = first_async_sqlite_task;
 
@@ -128,6 +125,7 @@ void *async_sqlite_query_handler(void* dummy)
 
 			if (!task->done)
 			{
+				task->timeout = Sys_MilliSeconds();
 				task->result = sqlite3_prepare_v2(task->db, task->query, COD2_MAX_STRINGLENGTH, &task->statement, 0);
 
 				while (task->result != SQLITE_OK)
@@ -182,17 +180,22 @@ void *async_sqlite_query_handler(void* dummy)
 							if (task->save && task->callback)
 							{
 								if (task->fields_size > MAX_SQLITE_FIELDS - 1)
-									continue;
+									break;
 
 								task->rows_size = 0;
 
 								for (int i = 0; i < sqlite3_column_count(task->statement); i++)
 								{
 									if (task->rows_size > MAX_SQLITE_ROWS - 1)
-										continue;
+										break;
 
-									strncpy(task->row[task->fields_size][task->rows_size], (const char *)sqlite3_column_text(task->statement, i), MAX_SQLITE_ROW_LENGTH - 1);
-									task->row[task->fields_size][task->rows_size][MAX_SQLITE_ROW_LENGTH - 1] = '\0';
+									const unsigned char *text = sqlite3_column_text(task->statement, i);
+
+									if (text != NULL)
+									{
+										strncpy(task->row[task->fields_size][task->rows_size], reinterpret_cast<const char*>(text), MAX_SQLITE_ROW_LENGTH - 1);
+										task->row[task->fields_size][task->rows_size][MAX_SQLITE_ROW_LENGTH - 1] = '\0';
+									}
 
 									task->rows_size++;
 								}
@@ -224,7 +227,7 @@ void *async_sqlite_query_handler(void* dummy)
 			}
 		}
 
-		pthread_mutex_unlock(&lock_async_sqlite_server_spawn);
+		pthread_mutex_unlock(&async_sqlite_server_spawn);
 
 		usleep(10000);
 	}
@@ -236,9 +239,9 @@ void gsc_async_sqlite_initialize()
 {
 	if (!async_sqlite_initialized)
 	{
-		if (pthread_mutex_init(&lock_async_sqlite_server_spawn, NULL) != 0)
+		if (pthread_mutex_init(&async_sqlite_server_spawn, NULL) != 0)
 		{
-			stackError("gsc_async_sqlite_initialize() server spawn mutex initialization failed!");
+			stackError("gsc_async_sqlite_initialize() failed to initialize async_sqlite_server_spawn mutex!");
 			stackPushUndefined();
 			return;
 		}
@@ -324,8 +327,8 @@ void gsc_async_sqlite_create_query()
 	newtask->save = true;
 	newtask->error = false;
 	newtask->hasargument = true;
-	newtask->entityNum = INVALID_ENTITY;
-	newtask->entityState = INVALID_STATE;
+	newtask->hasentity = false;
+	newtask->gentity = NULL;
 
 	int valueInt;
 	float valueFloat;
@@ -368,7 +371,7 @@ void gsc_async_sqlite_create_query()
 	else
 		first_async_sqlite_task = newtask;
 
-	stackPushInt(1);
+	stackPushBool(qtrue);
 }
 
 void gsc_async_sqlite_create_query_nosave()
@@ -428,8 +431,8 @@ void gsc_async_sqlite_create_query_nosave()
 	newtask->save = false;
 	newtask->error = false;
 	newtask->hasargument = true;
-	newtask->entityNum = INVALID_ENTITY;
-	newtask->entityState = INVALID_STATE;
+	newtask->hasentity = false;
+	newtask->gentity = NULL;
 
 	int valueInt;
 	float valueFloat;
@@ -472,10 +475,10 @@ void gsc_async_sqlite_create_query_nosave()
 	else
 		first_async_sqlite_task = newtask;
 
-	stackPushInt(1);
+	stackPushBool(qtrue);
 }
 
-void gsc_async_sqlite_create_entity_query(int entid)
+void gsc_async_sqlite_create_entity_query(scr_entref_t entid)
 {
 	int db;
 	char *query;
@@ -532,8 +535,8 @@ void gsc_async_sqlite_create_entity_query(int entid)
 	newtask->save = true;
 	newtask->error = false;
 	newtask->hasargument = true;
-	newtask->entityNum = entid;
-	newtask->entityState = *(int *)(G_ENTITY(newtask->entityNum) + 1);
+	newtask->hasentity = true;
+	newtask->gentity = &g_entities[entid];
 
 	int valueInt;
 	float valueFloat;
@@ -576,10 +579,10 @@ void gsc_async_sqlite_create_entity_query(int entid)
 	else
 		first_async_sqlite_task = newtask;
 
-	stackPushInt(1);
+	stackPushBool(qtrue);
 }
 
-void gsc_async_sqlite_create_entity_query_nosave(int entid)
+void gsc_async_sqlite_create_entity_query_nosave(scr_entref_t entid)
 {
 	int db;
 	char *query;
@@ -636,8 +639,8 @@ void gsc_async_sqlite_create_entity_query_nosave(int entid)
 	newtask->save = false;
 	newtask->error = false;
 	newtask->hasargument = true;
-	newtask->entityNum = entid;
-	newtask->entityState = *(int *)(G_ENTITY(newtask->entityNum) + 1);
+	newtask->hasentity = true;
+	newtask->gentity = &g_entities[entid];
 
 	int valueInt;
 	float valueFloat;
@@ -680,7 +683,7 @@ void gsc_async_sqlite_create_entity_query_nosave(int entid)
 	else
 		first_async_sqlite_task = newtask;
 
-	stackPushInt(1);
+	stackPushBool(qtrue);
 }
 
 void gsc_async_sqlite_checkdone()
@@ -698,62 +701,60 @@ void gsc_async_sqlite_checkdone()
 			{
 				if (task->save && task->callback)
 				{
-					if (task->entityNum != INVALID_ENTITY)
+					if (task->hasentity)
 					{
-						if (task->entityState != INVALID_STATE)
+						if (task->gentity != NULL)
 						{
-							int state = *(int *)(G_ENTITY(task->entityNum) + 1);
-
-							if (state != INVALID_STATE && state == task->entityState)
+							if (task->hasargument)
 							{
-								if (task->hasargument)
+								switch(task->valueType)
 								{
-									switch(task->valueType)
-									{
-									case INT_VALUE:
-										stackPushInt(task->intValue);
-										break;
+								case INT_VALUE:
+									stackPushInt(task->intValue);
+									break;
 
-									case FLOAT_VALUE:
-										stackPushFloat(task->floatValue);
-										break;
+								case FLOAT_VALUE:
+									stackPushFloat(task->floatValue);
+									break;
 
-									case STRING_VALUE:
-										stackPushString(task->stringValue);
-										break;
+								case STRING_VALUE:
+									stackPushString(task->stringValue);
+									break;
 
-									case VECTOR_VALUE:
-										stackPushVector(task->vectorValue);
-										break;
+								case VECTOR_VALUE:
+									stackPushVector(task->vectorValue);
+									break;
 
-									case OBJECT_VALUE:
-										stackPushObject(task->objectValue);
-										break;
+								case OBJECT_VALUE:
+									stackPushObject(task->objectValue);
+									break;
 
-									default:
-										stackPushUndefined();
-										break;
-									}
+								default:
+									stackPushUndefined();
+									break;
 								}
+							}
 
+							stackPushArray();
+
+							for (int i = 0; i < task->fields_size; i++)
+							{
 								stackPushArray();
 
-								for (int i = 0; i < task->fields_size; i++)
+								for (int x = 0; x < task->rows_size; x++)
 								{
-									stackPushArray();
-
-									for (int x = 0; x < task->rows_size; x++)
+									if (task->row[i][x] != NULL)
 									{
 										stackPushString(task->row[i][x]);
 										stackPushArrayLast();
 									}
-
-									stackPushArrayLast();
 								}
 
-								short ret = Scr_ExecEntThread(G_ENTITY(task->entityNum), task->callback, task->save + task->hasargument);
-								Scr_FreeThread(ret);
+								stackPushArrayLast();
 							}
+
+							short ret = Scr_ExecEntThread(task->gentity, task->callback, task->save + task->hasargument);
+							Scr_FreeThread(ret);
 						}
 					}
 					else
@@ -925,8 +926,13 @@ void gsc_sqlite_query()
 
 			for (int i = 0; i < sqlite3_column_count(statement); i++)
 			{
-				stackPushString((const char *)sqlite3_column_text(statement, i));
-				stackPushArrayLast();
+				const unsigned char *text = sqlite3_column_text(statement, i);
+
+				if (text != NULL)
+				{
+					stackPushString(reinterpret_cast<const char*>(text));
+					stackPushArrayLast();
+				}
 			}
 
 			stackPushArrayLast();
@@ -986,7 +992,24 @@ void gsc_sqlite_close()
 		}
 	}
 
-	stackPushInt(1);
+	stackPushBool(qtrue);
+}
+
+void gsc_sqlite_escape_string()
+{
+	char *string;
+
+	if ( ! stackGetParams("s", &string))
+	{
+		stackError("gsc_sqlite_escape_string() argument is undefined or has a wrong type");
+		stackPushUndefined();
+		return;
+	}
+
+	char *result = sqlite3_mprintf("%q", string);
+
+	stackPushString(result);
+	sqlite3_free(result);
 }
 
 #endif

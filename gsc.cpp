@@ -180,6 +180,7 @@ scr_function_t scriptFunctions[] =
 	{"sqlite_open", gsc_sqlite_open, 0},
 	{"sqlite_query", gsc_sqlite_query, 0},
 	{"sqlite_close", gsc_sqlite_close, 0},
+	{"sqlite_escape_string", gsc_sqlite_escape_string, 0},
 	{"async_sqlite_initialize", gsc_async_sqlite_initialize, 0},
 	{"async_sqlite_create_query", gsc_async_sqlite_create_query, 0},
 	{"async_sqlite_create_query_nosave", gsc_async_sqlite_create_query_nosave, 0},
@@ -188,20 +189,21 @@ scr_function_t scriptFunctions[] =
 
 #if COMPILE_UTILS == 1
 	{"printf", gsc_utils_printf, 0},
-	{"getArrayKeys", gsc_utils_getarraykeys, 0},
-	{"getAscii", gsc_utils_getAscii, 0},
-	{"toUpper", gsc_utils_toupper, 0},
+	{"printoutofband", gsc_utils_outofbandprint, 0},
+	{"getarraykeys", gsc_utils_getarraykeys, 0},
+	{"getascii", gsc_utils_getAscii, 0},
+	{"toupper", gsc_utils_toupper, 0},
 	{"system", gsc_utils_system, 0},
 	{"exponent", gsc_utils_exponent, 0},
 	{"round", gsc_utils_round, 0},
 	{"file_link", gsc_utils_file_link, 0},
 	{"file_unlink", gsc_utils_file_unlink, 0},
 	{"file_exists", gsc_utils_file_exists, 0},
-	{"FS_LoadDir", gsc_utils_FS_LoadDir, 0},
-	{"getType", gsc_utils_getType, 0},
+	{"fs_loaddir", gsc_utils_FS_LoadDir, 0},
+	{"gettype", gsc_utils_getType, 0},
 	{"float", gsc_utils_float, 0},
-	{"Cmd_ExecuteString", gsc_utils_ExecuteString, 0},
-	{"sendGameServerCommand", gsc_utils_sendgameservercommand, 0},
+	{"cmd_executestring", gsc_utils_ExecuteString, 0},
+	{"sendgameservercommand", gsc_utils_sendgameservercommand, 0},
 	{"scandir", gsc_utils_scandir, 0},
 	{"fopen", gsc_utils_fopen, 0},
 	{"fread", gsc_utils_fread, 0},
@@ -212,21 +214,26 @@ scr_function_t scriptFunctions[] =
 	{"getsystemtime", gsc_utils_getsystemtime, 0},
 	{"getserverstarttime", gsc_utils_getserverstarttime, 0},
 	{"getlocaltime", gsc_utils_getlocaltime, 0},
-	{"G_FindConfigstringIndex", gsc_G_FindConfigstringIndex, 0},
-	{"G_FindConfigstringIndexOriginal", gsc_G_FindConfigstringIndexOriginal, 0},
+	{"g_findconfigstringindex", gsc_G_FindConfigstringIndex, 0},
+	{"g_findconfigstringindexoriginal", gsc_G_FindConfigstringIndexOriginal, 0},
 	{"getconfigstring", gsc_get_configstring, 0},
 	{"setconfigstring", gsc_set_configstring, 0},
 	{"makelocalizedstring", gsc_make_localized_string, 0},
 	{"sqrt", gsc_utils_sqrt, 0},
-	{"sqrtInv", gsc_utils_sqrtInv, 0},
+	{"sqrtinv", gsc_utils_sqrtInv, 0},
 	{"getlasttestclientnumber", gsc_utils_getlasttestclientnumber, 0},
 	{"bullethiteffect", gsc_utils_bullethiteffect, 0},
 	{"vectorscale", gsc_utils_vectorscale, 0},
+	{"remove_file", gsc_utils_remove_file, 0},
+	{"putchar", gsc_utils_putchar, 0},
+	{"remotecommand", gsc_utils_remotecommand, 0},
 #endif
 
 #if COMPILE_WEAPONS == 1
 	{"getweaponmaxammo", gsc_weapons_getweaponmaxammo, 0},
+	{"setweaponmaxammo", gsc_weapons_setweaponmaxammo, 0},
 	{"getweaponclipsize", gsc_weapons_getweaponclipsize, 0},
+	{"setweaponclipsize", gsc_weapons_setweaponclipsize, 0},
 	{"getweapondamage", gsc_weapons_getweapondamage, 0},
 	{"setweapondamage", gsc_weapons_setweapondamage, 0},
 	{"getweaponmeleedamage", gsc_weapons_getweaponmeleedamage, 0},
@@ -253,7 +260,7 @@ scr_function_t scriptFunctions[] =
 	{NULL, NULL, 0} /* terminator */
 };
 
-xfunction_t Scr_GetCustomFunction(const char **fname, int *fdev)
+xfunction_t Scr_GetCustomFunction(const char **fname, qboolean *fdev)
 {
 	xfunction_t m = Scr_GetFunction(fname, fdev);
 
@@ -290,50 +297,51 @@ scr_method_t scriptMethods[] =
 	{"switchtoweaponid", gsc_bots_switchtoweaponid, 0},
 #endif
 
+#if COMPILE_ENTITY == 1
+	{"setalive", gsc_entity_setalive, 0},
+	{"setbounds", gsc_entity_setbounds, 0},
+#endif
+
 #if COMPILE_MYSQL_VORON == 1
 	{"async_mysql_create_entity_query", gsc_async_mysql_create_entity_query, 0},
 	{"async_mysql_create_entity_query_nosave", gsc_async_mysql_create_entity_query_nosave, 0},
 #endif
 
 #if COMPILE_PLAYER == 1
-	{"getStance", gsc_player_stance_get, 0},
-	{"setStance", gsc_player_stance_set, 0},
-	{"setVelocity", gsc_player_velocity_set, 0},
-	{"addVelocity", gsc_player_velocity_add, 0},
-	{"getVelocity", gsc_player_velocity_get, 0},
-	{"aimButtonPressed", gsc_player_button_ads, 0},
-	{"leftButtonPressed", gsc_player_button_left, 0},
-	{"rightButtonPressed", gsc_player_button_right, 0},
-	{"forwardButtonPressed", gsc_player_button_forward, 0},
-	{"backButtonPressed", gsc_player_button_back, 0},
-	{"leanleftButtonPressed", gsc_player_button_leanleft, 0},
-	{"leanrightButtonPressed", gsc_player_button_leanright, 0},
-	{"jumpButtonPressed", gsc_player_button_jump, 0},
-	{"reloadButtonPressed", gsc_player_button_reload, 0},
-	{"fragButtonPressed", gsc_player_button_frag, 0},
-	{"smokeButtonPressed", gsc_player_button_smoke, 0},
-	{"getIP", gsc_player_getip, 0},
-	{"getPing", gsc_player_getping, 0},
-	{"getSpectatorClient", gsc_player_spectatorclient_get, 0},
-	{"ClientCommand", gsc_player_ClientCommand, 0},
-	{"getLastConnectTime", gsc_player_getLastConnectTime, 0},
-	{"getLastMSG", gsc_player_getLastMSG, 0},
-	{"getAddressType", gsc_player_addresstype, 0},
-	{"getClientState", gsc_player_getclientstate, 0},
-	{"renameClient", gsc_player_renameclient, 0},
-	{"setAlive", gsc_entity_setalive, 0},
-	{"setBounds", gsc_entity_setbounds, 0},
-	{"get_userinfo", gsc_get_userinfo, 0},
-	{"set_userinfo", gsc_set_userinfo, 0},
-	{"printOutOfBand", gsc_player_outofbandprint, 0},
-	{"connectionlessPacket", gsc_player_connectionlesspacket, 0},
+	{"getstance", gsc_player_stance_get, 0},
+	{"setstance", gsc_player_stance_set, 0},
+	{"setvelocity", gsc_player_velocity_set, 0},
+	{"addvelocity", gsc_player_velocity_add, 0},
+	{"getvelocity", gsc_player_velocity_get, 0},
+	{"aimbuttonpressed", gsc_player_button_ads, 0},
+	{"leftbuttonpressed", gsc_player_button_left, 0},
+	{"rightbuttonpressed", gsc_player_button_right, 0},
+	{"forwardbuttonpressed", gsc_player_button_forward, 0},
+	{"backbuttonpressed", gsc_player_button_back, 0},
+	{"leanleftbuttonpressed", gsc_player_button_leanleft, 0},
+	{"leanrightbuttonpressed", gsc_player_button_leanright, 0},
+	{"jumpbuttonpressed", gsc_player_button_jump, 0},
+	{"reloadbuttonpressed", gsc_player_button_reload, 0},
+	{"fragbuttonpressed", gsc_player_button_frag, 0},
+	{"smokebuttonpressed", gsc_player_button_smoke, 0},
+	{"getip", gsc_player_getip, 0},
+	{"getping", gsc_player_getping, 0},
+	{"getspectatorclient", gsc_player_spectatorclient_get, 0},
+	{"clientcommand", gsc_player_clientcommand, 0},
+	{"getlastconnecttime", gsc_player_getlastconnecttime, 0},
+	{"getlastmsg", gsc_player_getlastmsg, 0},
+	{"getaddresstype", gsc_player_addresstype, 0},
+	{"getclientstate", gsc_player_getclientstate, 0},
+	{"renameclient", gsc_player_renameclient, 0},
+	{"get_userinfo", gsc_player_get_userinfo, 0},
+	{"set_userinfo", gsc_player_set_userinfo, 0},
+	{"printoutofband", gsc_player_outofbandprint, 0},
+	{"connectionlesspacket", gsc_player_connectionlesspacket, 0},
 	{"clientuserinfochanged", gsc_player_clientuserinfochanged, 0},
-	{"resetNextReliableTime", gsc_player_resetNextReliableTime, 0},
+	{"resetnextreliabletime", gsc_player_resetnextreliabletime, 0},
 	{"setg_speed", gsc_player_setg_speed, 0},
 	{"setg_gravity", gsc_player_setg_gravity, 0},
 	{"setweaponfiremeleedelay", gsc_player_setweaponfiremeleedelay, 0},
-	{"disableitempickup", gsc_player_disable_item_pickup, 0},
-	{"enableitempickup", gsc_player_enable_item_pickup, 0},
 	{"setanim", gsc_player_set_anim, 0},
 	{"getjumpslowdowntimer", gsc_player_getjumpslowdowntimer, 0},
 	{"getcooktime", gsc_player_getcooktime, 0},
@@ -341,10 +349,12 @@ scr_method_t scriptMethods[] =
 	{"clienthasclientmuted", gsc_player_clienthasclientmuted, 0},
 	{"getlastgamestatesize", gsc_player_getlastgamestatesize, 0},
 	{"getfps", gsc_player_getfps, 0},
-	{"setmovespeedscale", gsc_player_setmovespeedscale, 0},
 	{"ismantling", gsc_player_ismantling, 0},
 	{"isonladder", gsc_player_isonladder, 0},
-	{"lookatkiller", gsc_player_lookatkiller, 0},
+	{"isbot", gsc_player_isbot, 0},
+	{"disableitempickup", gsc_player_disableitempickup, 0},
+	{"enableitempickup", gsc_player_enableitempickup, 0},
+	{"getcurrentoffhandslotammo", gsc_player_getcurrentoffhandslotammo, 0},
 #endif
 
 #if COMPILE_SQLITE == 1
@@ -359,7 +369,7 @@ scr_method_t scriptMethods[] =
 	{NULL, NULL, 0} /* terminator */
 };
 
-xmethod_t Scr_GetCustomMethod(const char **fname, int *fdev)
+xmethod_t Scr_GetCustomMethod(const char **fname, qboolean *fdev)
 {
 	xmethod_t m = Scr_GetMethod(fname, fdev);
 
@@ -465,6 +475,17 @@ int stackGetParams(const char *params, ...)
 			break;
 		}
 
+		case 'c':
+		{
+			unsigned int *tmp = va_arg(args, unsigned int *);
+			if ( ! stackGetParamConstString(i, tmp))
+			{
+				Com_DPrintf("\nstackGetParams() Param %i is not a const string\n", i);
+				errors++;
+			}
+			break;
+		}
+
 		default:
 			errors++;
 			Com_DPrintf("\nUnknown identifier [%s] passed to stackGetParams()\n", params[i]);
@@ -530,6 +551,22 @@ int stackGetParamString(int param, char **value)
 	return 1;
 }
 
+int stackGetParamConstString(int param, unsigned int *value)
+{
+	if (param >= Scr_GetNumParam())
+		return 0;
+
+	VariableValue *var;
+	var = &scrVmPub.top[-param];
+
+	if (var->type != STACK_STRING)
+		return 0;
+
+	*value = var->u.stringValue;
+
+	return 1;
+}
+
 int stackGetParamVector(int param, vec3_t value)
 {
 	if (param >= Scr_GetNumParam())
@@ -581,7 +618,7 @@ int stackGetParamObject(int param, unsigned int *value)
 	if (var->type != STACK_OBJECT)
 		return 0;
 
-	*value = *(unsigned int *)var;
+	*value = var->u.pointerValue;
 
 	return 1;
 }
