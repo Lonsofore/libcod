@@ -57,6 +57,24 @@ static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x0
 static const SL_ConvertToString_t SL_ConvertToString = (SL_ConvertToString_t)0x08078EE6;
 #endif
 
+typedef unsigned int (*SL_GetString_t)(const char *str, int type);
+#if COD_VERSION == COD2_1_0
+static const SL_GetString_t SL_GetString = (SL_GetString_t)0x08079290;
+#elif COD_VERSION == COD2_1_2
+static const SL_GetString_t SL_GetString = (SL_GetString_t)0x08079814;
+#elif COD_VERSION == COD2_1_3
+static const SL_GetString_t SL_GetString = (SL_GetString_t)0x080798E0;
+#endif
+
+typedef void (*SL_RemoveRefToString_t)(unsigned int);
+#if COD_VERSION == COD2_1_0
+static const SL_RemoveRefToString_t SL_RemoveRefToString = (SL_RemoveRefToString_t)0x080796A2;
+#elif COD_VERSION == COD2_1_2
+static const SL_RemoveRefToString_t SL_RemoveRefToString = (SL_RemoveRefToString_t)0x08079C26;
+#elif COD_VERSION == COD2_1_3
+static const SL_RemoveRefToString_t SL_RemoveRefToString = (SL_RemoveRefToString_t)0x08079CF2;
+#endif
+
 typedef int (*Scr_GetFunctionHandle_t)(const char* scriptName, const char* labelName, int isNeeded);
 #if COD_VERSION == COD2_1_0
 static const Scr_GetFunctionHandle_t Scr_GetFunctionHandle = (Scr_GetFunctionHandle_t)0x0810DD70;
@@ -129,6 +147,15 @@ static const Com_sprintf_t Com_sprintf = (Com_sprintf_t)0x080B7DC6;
 static const Com_sprintf_t Com_sprintf = (Com_sprintf_t)0x080B7F0A;
 #endif
 
+typedef void (*Cmd_AddCommand_t)(const char *cmd_name, xcommand_t function);
+#if COD_VERSION == COD2_1_0
+static const Cmd_AddCommand_t Cmd_AddCommand = (Cmd_AddCommand_t)0x080604B2;
+#elif COD_VERSION == COD2_1_2
+static const Cmd_AddCommand_t Cmd_AddCommand = (Cmd_AddCommand_t)0x080606BE;
+#elif COD_VERSION == COD2_1_3
+static const Cmd_AddCommand_t Cmd_AddCommand = (Cmd_AddCommand_t)0x080606B6;
+#endif
+
 typedef void (*Cmd_ExecuteString_t)(const char *cmd);
 #if COD_VERSION == COD2_1_0
 static const Cmd_ExecuteString_t Cmd_ExecuteString = (Cmd_ExecuteString_t)0x08060754;
@@ -163,6 +190,33 @@ static const FS_LoadDir_t FS_LoadDir = (FS_LoadDir_t)0x080A01A4;
 static const FS_LoadDir_t FS_LoadDir = (FS_LoadDir_t)0x080A22D8;
 #elif COD_VERSION == COD2_1_3
 static const FS_LoadDir_t FS_LoadDir = (FS_LoadDir_t)0x080A241C;
+#endif
+
+typedef void (*FS_Printf_t)(fileHandle_t h, const char *fmt, ...);
+#if COD_VERSION == COD2_1_0
+static const FS_Printf_t FS_Printf = (FS_Printf_t)0x0809E52A;
+#elif COD_VERSION == COD2_1_2
+static const FS_Printf_t FS_Printf = (FS_Printf_t)0x080A05E8;
+#elif COD_VERSION == COD2_1_3
+static const FS_Printf_t FS_Printf = (FS_Printf_t)0x080A072C;
+#endif
+
+typedef fileHandle_t (*FS_FOpenFileWrite_t)(const char* filename);
+#if COD_VERSION == COD2_1_0
+static const FS_FOpenFileWrite_t FS_FOpenFileWrite = (FS_FOpenFileWrite_t)0x0809CDDE;
+#elif COD_VERSION == COD2_1_2
+static const FS_FOpenFileWrite_t FS_FOpenFileWrite = (FS_FOpenFileWrite_t)0x0809EE9C;
+#elif COD_VERSION == COD2_1_3
+static const FS_FOpenFileWrite_t FS_FOpenFileWrite = (FS_FOpenFileWrite_t)0x0809EFE0;
+#endif
+
+typedef qboolean (*FS_FCloseFile_t)(fileHandle_t f);
+#if COD_VERSION == COD2_1_0
+static const FS_FCloseFile_t FS_FCloseFile = (FS_FCloseFile_t)0x0809CC52;
+#elif COD_VERSION == COD2_1_2
+static const FS_FCloseFile_t FS_FCloseFile = (FS_FCloseFile_t)0x0809ED10;
+#elif COD_VERSION == COD2_1_3
+static const FS_FCloseFile_t FS_FCloseFile = (FS_FCloseFile_t)0x0809EE54;
 #endif
 
 typedef xfunction_t (*Scr_GetFunction_t)(const char** v_functionName, qboolean* v_developer);
@@ -208,6 +262,15 @@ static const Cvar_RegisterBool_t Cvar_RegisterBool = (Cvar_RegisterBool_t)0x080B
 static const Cvar_RegisterBool_t Cvar_RegisterBool = (Cvar_RegisterBool_t)0x080B3E8E;
 #elif COD_VERSION == COD2_1_3
 static const Cvar_RegisterBool_t Cvar_RegisterBool = (Cvar_RegisterBool_t)0x080B3FD2;
+#endif
+
+typedef cvar_t* (*Cvar_RegisterFloat_t)(const char* var_name, float var_value, float var_min, float var_max, unsigned short flags);
+#if COD_VERSION == COD2_1_0
+static const Cvar_RegisterFloat_t Cvar_RegisterFloat = (Cvar_RegisterFloat_t)0x080B1C2C;
+#elif COD_VERSION == COD2_1_2
+static const Cvar_RegisterFloat_t Cvar_RegisterFloat = (Cvar_RegisterFloat_t)0x080B3F48;
+#elif COD_VERSION == COD2_1_3
+static const Cvar_RegisterFloat_t Cvar_RegisterFloat = (Cvar_RegisterFloat_t)0x080B408C;
 #endif
 
 typedef cvar_t* (*Cvar_RegisterString_t)(const char *var_name, const char *var_value, unsigned short flags);
@@ -534,6 +597,15 @@ static const BG_WeaponDefs_t BG_WeaponDefs = (BG_WeaponDefs_t)0x080EB860;
 static const BG_WeaponDefs_t BG_WeaponDefs = (BG_WeaponDefs_t)0x080EB9A4;
 #endif
 
+typedef int (*BG_FindWeaponIndexForName_t)(const char *name);
+#if COD_VERSION == COD2_1_0
+static const BG_FindWeaponIndexForName_t BG_FindWeaponIndexForName = (BG_FindWeaponIndexForName_t)0x080E949C;
+#elif COD_VERSION == COD2_1_2
+static const BG_FindWeaponIndexForName_t BG_FindWeaponIndexForName = (BG_FindWeaponIndexForName_t)0x080EBA8C;
+#elif COD_VERSION == COD2_1_3
+static const BG_FindWeaponIndexForName_t BG_FindWeaponIndexForName = (BG_FindWeaponIndexForName_t)0x080EBBD0;
+#endif
+
 typedef int (*BG_GetNumWeapons_t)(void);
 #if COD_VERSION == COD2_1_0
 static const BG_GetNumWeapons_t BG_GetNumWeapons = (BG_GetNumWeapons_t)0x080E9322;
@@ -606,13 +678,22 @@ static const Scr_IsSystemActive_t Scr_IsSystemActive = (Scr_IsSystemActive_t)0x0
 static const Scr_IsSystemActive_t Scr_IsSystemActive = (Scr_IsSystemActive_t)0x08084678;
 #endif
 
-typedef int (*Sys_GetValue_t)(int key);
+typedef void* (*Sys_GetValue_t)(int key);
 #if COD_VERSION == COD2_1_0
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D44A4;
 #elif COD_VERSION == COD2_1_2
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D6A7C;
 #elif COD_VERSION == COD2_1_3
 static const Sys_GetValue_t Sys_GetValue = (Sys_GetValue_t)0x080D6BC0;
+#endif
+
+typedef void (*Sys_SetValue_t)(int key, void* value);
+#if COD_VERSION == COD2_1_0
+static const Sys_SetValue_t Sys_SetValue = (Sys_SetValue_t)0x080D4492;
+#elif COD_VERSION == COD2_1_2
+static const Sys_SetValue_t Sys_SetValue = (Sys_SetValue_t)0x080D6A6A;
+#elif COD_VERSION == COD2_1_3
+static const Sys_SetValue_t Sys_SetValue = (Sys_SetValue_t)0x080D6BAE;
 #endif
 
 typedef void (*Scr_AddBool_t)(qboolean);
@@ -919,6 +1000,60 @@ static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTraject
 static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTrajectory_t)0x080DF490;
 #elif COD_VERSION == COD2_1_3
 static const BG_EvaluateTrajectory_t BG_EvaluateTrajectory = (BG_EvaluateTrajectory_t)0x080DF5D4;
+#endif
+
+typedef void (*BG_AddPredictableEventToPlayerstate_t)(int newEvent, unsigned int eventParm, playerState_s *ps);
+#if COD_VERSION == COD2_1_0
+static const BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)0x080DD554;
+#elif COD_VERSION == COD2_1_2
+static const BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)0x080DFB34;
+#elif COD_VERSION == COD2_1_3
+static const BG_AddPredictableEventToPlayerstate_t BG_AddPredictableEventToPlayerstate = (BG_AddPredictableEventToPlayerstate_t)0x080DFC78;
+#endif
+
+typedef int (*BG_AnimScriptEvent_t)(struct playerState_s* ps, enum scriptAnimEventTypes_t event, int isContinue, int force);
+#if COD_VERSION == COD2_1_0
+static const BG_AnimScriptEvent_t BG_AnimScriptEvent = (BG_AnimScriptEvent_t)0x080D6FCA;
+#elif COD_VERSION == COD2_1_2
+static const BG_AnimScriptEvent_t BG_AnimScriptEvent = (BG_AnimScriptEvent_t)0x080D95AA;
+#elif COD_VERSION == COD2_1_3
+static const BG_AnimScriptEvent_t BG_AnimScriptEvent = (BG_AnimScriptEvent_t)0x080D96EE;
+#endif
+
+typedef unsigned int (*PM_GroundSurfaceType_t)(pml_t *pml);
+#if COD_VERSION == COD2_1_0
+static const PM_GroundSurfaceType_t PM_GroundSurfaceType = (PM_GroundSurfaceType_t)0x080DFAFC;
+#elif COD_VERSION == COD2_1_2
+static const PM_GroundSurfaceType_t PM_GroundSurfaceType = (PM_GroundSurfaceType_t)0x080E20DC;
+#elif COD_VERSION == COD2_1_3
+static const PM_GroundSurfaceType_t PM_GroundSurfaceType = (PM_GroundSurfaceType_t)0x080E2220;
+#endif
+
+typedef vec_t (*Vec3Normalize_t)(vec3_t v);
+#if COD_VERSION == COD2_1_0
+static const Vec3Normalize_t Vec3Normalize = (Vec3Normalize_t)0x080A20C0;
+#elif COD_VERSION == COD2_1_2
+static const Vec3Normalize_t Vec3Normalize = (Vec3Normalize_t)0x080A42E0;
+#elif COD_VERSION == COD2_1_3
+static const Vec3Normalize_t Vec3Normalize = (Vec3Normalize_t)0x080A4424;
+#endif
+
+typedef StanceState (*PM_GetEffectiveStance_t)(struct playerState_s *ps);
+#if COD_VERSION == COD2_1_0
+static const PM_GetEffectiveStance_t PM_GetEffectiveStance = (PM_GetEffectiveStance_t)0x080DEE0E;
+#elif COD_VERSION == COD2_1_2
+static const PM_GetEffectiveStance_t PM_GetEffectiveStance = (PM_GetEffectiveStance_t)0x080E13EE;
+#elif COD_VERSION == COD2_1_3
+static const PM_GetEffectiveStance_t PM_GetEffectiveStance = (PM_GetEffectiveStance_t)0x080E1532;
+#endif
+
+typedef void (*Scr_Notify_t)(gentity_t *ent, unsigned short constString, unsigned int numArgs);
+#if COD_VERSION == COD2_1_0
+static const Scr_Notify_t Scr_Notify = (Scr_Notify_t)0x08118E4E;
+#elif COD_VERSION == COD2_1_2
+static const Scr_Notify_t Scr_Notify = (Scr_Notify_t)0x0811B182;
+#elif COD_VERSION == COD2_1_3
+static const Scr_Notify_t Scr_Notify = (Scr_Notify_t)0x0811B2DE;
 #endif
 
 #endif

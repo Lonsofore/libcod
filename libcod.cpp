@@ -77,7 +77,13 @@ void hook_sv_init(const char *format, ...)
 	sv_wwwDownload = Cvar_FindVar("sv_wwwDownload");
 #endif
 
+#if COMPILE_BSP == 1
+	CM_AddCommand();
+#endif
+
 }
+
+void hook_bad_printf(const char *format, ...) {}
 
 void hook_sv_spawnserver(const char *format, ...)
 {
@@ -588,24 +594,21 @@ int hook_BG_IsWeaponValid(int a1, int a2)
 
 char *custom_va(const char *format, ...)
 {
-	char *s;
+	struct va_info_t *info;
+	int index;
 	va_list va;
-	int v1;
-	signed int v3;
 
-	v1 = Sys_GetValue(1);
-	s = (char *)(v1 + (*(int *)(v1 + 2048) << 10));
-	v3 = *(int *)(v1 + 2048) + 1;
-	*(int *)(v1 + 2048) = v3 / 2;
-	*(int *)(v1 + 2048) = v3 - 2 * *(int *)(v1 + 2048);
+	info = (va_info_t*)Sys_GetValue(1);
+	index = info->index;
+	info->index = (info->index + 1) % MAX_VASTRINGS;
 
 	va_start(va, format);
-	vsnprintf(s, COD2_MAX_STRINGLENGTH, format, va);
+	vsnprintf(info->va_string[index], sizeof(info->va_string[0]), format, va);
 	va_end(va);
 
-	s[COD2_MAX_STRINGLENGTH - 1] = '\0';
+	info->va_string[index][1023] = 0;
 
-	return s;
+	return info->va_string[index];
 }
 
 void hook_SV_VerifyIwds_f(client_t *cl)
@@ -1052,6 +1055,11 @@ bool SVC_RateLimitAddress( netadr_t from, int burst, int period )
 	return SVC_RateLimit( bucket, burst, period );
 }
 
+bool isRconCommandWithForwardedOutput(const char* command)
+{
+	return (strcmp(command, "map") == 0 || strcmp(command, "map_restart") == 0 || strcmp(command, "fast_restart") == 0 || strcmp(command, "devmap") == 0);
+}
+
 void hook_SVC_RemoteCommand(netadr_t from, msg_t *msg)
 {
 	if (!sv_allowRcon->boolean)
@@ -1077,9 +1085,19 @@ void hook_SVC_RemoteCommand(netadr_t from, msg_t *msg)
 		}
 	}
 
-	if (!codecallback_remotecommand || badRconPassword || !Scr_IsSystemActive() || strcmp(Cmd_Argv(2), "map") == 0 || strcmp(Cmd_Argv(2), "devmap") == 0)
+	if (!codecallback_remotecommand || badRconPassword || !Scr_IsSystemActive() || isRconCommandWithForwardedOutput(Cmd_Argv(2)))
 	{
-		RemoteCommand(from, msg);
+#if COD_VERSION == COD2_1_0
+		int lasttime_offset = 0x0848B674;
+#elif COD_VERSION == COD2_1_2
+		int lasttime_offset = 0x0849EB74;
+#elif COD_VERSION == COD2_1_3
+		int lasttime_offset = 0x0849FBF4;
+#endif
+
+		*(int *)lasttime_offset = 0;
+
+		SVC_RemoteCommand(from, msg);
 	}
 	else
 	{
@@ -1096,7 +1114,7 @@ void hook_SVC_RemoteCommand(netadr_t from, msg_t *msg)
 		}
 
 		stackPushString(NET_AdrToString(from));
-	
+
 		short ret = Scr_ExecThread(codecallback_remotecommand, 3);
 		Scr_FreeThread(ret);
 	}
@@ -1277,7 +1295,7 @@ bool hook_SV_MapExists(const char *mapname)
 	{
 		return map_exists;
 	}
-	else 
+	else
 	{
 		char map_check[1024];
 		char library_path[512];
@@ -1332,12 +1350,11 @@ public:
 		cracking_hook_call(0x0807059F, (int)Scr_GetCustomFunction);
 		cracking_hook_call(0x080707C3, (int)Scr_GetCustomMethod);
 		cracking_hook_call(0x0810E507, (int)Com_DPrintf);
+		cracking_hook_call(0x08081CFE, (int)hook_scriptError);
 
 #if COMPILE_PLAYER == 1
 		cracking_hook_call(0x0808E18F, (int)hook_gamestate_info);
 #endif
-
-		cracking_hook_call(0x08081CFE, (int)hook_scriptError);
 
 		hook_gametype_scripts = new cHook(0x0810DDEE, (int)hook_codscript_gametype_scripts);
 		hook_gametype_scripts->hook();
@@ -1369,6 +1386,18 @@ public:
 		cracking_hook_function(0x080945AC, (int)custom_SV_CheckTimeouts);
 		cracking_hook_function(0x08094F02, (int)custom_SV_MasterHeartbeat);
 
+#if COMPILE_JUMP == 1
+		cracking_hook_function(0x080D9FF4, (int)Jump_ClearState);
+		cracking_hook_function(0x080DA1A6, (int)Jump_ReduceFriction);
+		cracking_hook_function(0x080DA238, (int)Jump_ClampVelocity);
+		cracking_hook_function(0x080DA0A4, (int)Jump_IsPlayerAboveMax);
+		cracking_hook_function(0x080DA016, (int)Jump_GetStepHeight);
+		cracking_hook_function(0x080DA584, (int)Jump_Check);
+		cracking_hook_function(0x080DA0F4, (int)Jump_ApplySlowdown);
+		cracking_hook_function(0x080DA0CA, (int)Jump_ActivateSlowdown);
+		cracking_hook_function(0x080D9EE8, (int)Jump_RegisterDvars);
+#endif
+
 #if COMPILE_BOTS == 1
 		cracking_hook_function(0x0809479A, (int)custom_SV_BotUserMove);
 #endif
@@ -1393,12 +1422,12 @@ public:
 		cracking_hook_call(0x08070B1B, (int)Scr_GetCustomFunction);
 		cracking_hook_call(0x08070D3F, (int)Scr_GetCustomMethod);
 		cracking_hook_call(0x08110832, (int)Com_DPrintf);
+		cracking_hook_call(0x0808227A, (int)hook_scriptError);
+		cracking_hook_call(0x0808FCBE, (int)hook_bad_printf);
 
 #if COMPILE_PLAYER == 1
 		cracking_hook_call(0x0808F533, (int)hook_gamestate_info);
 #endif
-
-		cracking_hook_call(0x0808227A, (int)hook_scriptError);
 
 		hook_gametype_scripts = new cHook(0x0811012A, (int)hook_codscript_gametype_scripts);
 		hook_gametype_scripts->hook();
@@ -1430,6 +1459,18 @@ public:
 		cracking_hook_function(0x080964C4, (int)custom_SV_CheckTimeouts);
 		cracking_hook_function(0x08096E1A, (int)custom_SV_MasterHeartbeat);
 
+#if COMPILE_JUMP == 1
+		cracking_hook_function(0x080DC5D4, (int)Jump_ClearState);
+		cracking_hook_function(0x080DC786, (int)Jump_ReduceFriction);
+		cracking_hook_function(0x080DC818, (int)Jump_ClampVelocity);
+		cracking_hook_function(0x080DC684, (int)Jump_IsPlayerAboveMax);
+		cracking_hook_function(0x080DC5F6, (int)Jump_GetStepHeight);
+		cracking_hook_function(0x080DCB64, (int)Jump_Check);
+		cracking_hook_function(0x080DC6D4, (int)Jump_ApplySlowdown);
+		cracking_hook_function(0x080DC6AA, (int)Jump_ActivateSlowdown);
+		cracking_hook_function(0x080DC4C8, (int)Jump_RegisterDvars);
+#endif
+
 #if COMPILE_BOTS == 1
 		cracking_hook_function(0x080966B2, (int)custom_SV_BotUserMove);
 #endif
@@ -1454,12 +1495,12 @@ public:
 		cracking_hook_call(0x08070BE7, (int)Scr_GetCustomFunction);
 		cracking_hook_call(0x08070E0B, (int)Scr_GetCustomMethod);
 		cracking_hook_call(0x0811098E, (int)Com_DPrintf);
+		cracking_hook_call(0x08082346, (int)hook_scriptError);
+		cracking_hook_call(0x0808FD52, (int)hook_bad_printf);
 
 #if COMPILE_PLAYER == 1
 		cracking_hook_call(0x0808F5C7, (int)hook_gamestate_info);
 #endif
-
-		cracking_hook_call(0x08082346, (int)hook_scriptError);
 
 		hook_gametype_scripts = new cHook(0x08110286, (int)hook_codscript_gametype_scripts);
 		hook_gametype_scripts->hook();
@@ -1490,6 +1531,18 @@ public:
 		cracking_hook_function(0x080963C8, (int)custom_SV_CalcPings);
 		cracking_hook_function(0x0809657E, (int)custom_SV_CheckTimeouts);
 		cracking_hook_function(0x08096ED6, (int)custom_SV_MasterHeartbeat);
+
+#if COMPILE_JUMP == 1
+		cracking_hook_function(0x080DC718, (int)Jump_ClearState);
+		cracking_hook_function(0x080DC8CA, (int)Jump_ReduceFriction);
+		cracking_hook_function(0x080DC95C, (int)Jump_ClampVelocity);
+		cracking_hook_function(0x080DC7C8, (int)Jump_IsPlayerAboveMax);
+		cracking_hook_function(0x080DC73A, (int)Jump_GetStepHeight);
+		cracking_hook_function(0x080DCCA8, (int)Jump_Check);
+		cracking_hook_function(0x080DC818, (int)Jump_ApplySlowdown);
+		cracking_hook_function(0x080DC7EE, (int)Jump_ActivateSlowdown);
+		cracking_hook_function(0x080DC60C, (int)Jump_RegisterDvars);
+#endif
 
 #if COMPILE_BOTS == 1
 		cracking_hook_function(0x0809676C, (int)custom_SV_BotUserMove);

@@ -125,7 +125,7 @@ int stackPrintParam(int param)
 	case STACK_STRING:
 		char *str;
 		stackGetParamString(param, &str); // no error checking, since we know it's a string
-		if (con_coloredPrints->boolean)
+		if (con_coloredPrints->boolean && strchr(str, Q_COLOR_ESCAPE) != NULL)
 			Sys_AnsiColorPrint(str);
 		else
 			printf("%s", str);
@@ -916,23 +916,18 @@ void gsc_utils_remotecommand()
 {
 	char * sFrom;
 	int pointerMsg;
-	
+
 	if (!stackGetParams("si", &sFrom, &pointerMsg))
 	{
 		stackError("gsc_utils_remotecommand() one or more arguments is undefined or has a wrong type");
 		return;
 	}
-	
+
 	netadr_t from;
-	
+
 	msg_t * msg = (msg_t *)pointerMsg;
 	NET_StringToAdr(sFrom, &from);
 
-	RemoteCommand(from, msg);
-}
-
-void RemoteCommand(netadr_t from, msg_t *msg)
-{
 #if COD_VERSION == COD2_1_0
 	int lasttime_offset = 0x0848B674;
 #elif COD_VERSION == COD2_1_2
@@ -944,6 +939,11 @@ void RemoteCommand(netadr_t from, msg_t *msg)
 	*(int *)lasttime_offset = 0;
 
 	SVC_RemoteCommand(from, msg);
+}
+
+void gsc_utils_getsysmilliseconds()
+{
+	stackPushInt(Sys_MilliSeconds());
 }
 
 #endif
